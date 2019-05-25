@@ -1,0 +1,32 @@
+cbuffer mvp_buffer {
+	float4x4 g_mvp;
+};
+
+struct VertexIn {
+	float3 pos : POSITION;
+	float3 normal : NORMAL;
+};
+
+struct VertexOut {
+	float4 pos : SV_POSITION;
+	float3 normal : TEXCOORD;
+};
+
+VertexOut vertexShader(VertexIn i) {
+	VertexOut o;
+	o.pos = mul(g_mvp, float4(i.pos, 1));
+	o.normal = i.normal;
+    return o;
+}
+
+@
+
+struct VertexOut {
+	float4 pos : SV_POSITION;
+	float3 normal : TEXCOORD;
+};
+
+float4 fragmentShader(VertexOut o) : SV_TARGET {
+	float diff = clamp(dot(o.normal, float3(0, 1, 0)), 0.3, 1);
+    return float4(1,1,1,1) * diff;
+}

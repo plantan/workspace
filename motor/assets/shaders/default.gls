@@ -1,0 +1,18 @@
+#version 100
+ 
+varying vec4 color;
+
+void main() {
+	gl_FragColor = vec4( 1,1,1,1 );
+}
+ 
+@
+
+#version 100
+
+uniform mat4 u_mvp;
+attribute a_position;
+
+void main() {
+	gl_Position = u_mvp * gl_Vertex;
+}
