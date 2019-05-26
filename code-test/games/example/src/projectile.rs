@@ -3,6 +3,9 @@ use std::collections::VecDeque;
 use super::ct::gfx;
 use std::f32::consts;
 
+// TODO: Change from Projectile to some other more general name 
+// that works for both projectiles and asteroids!
+
 const PROJECTILE_LIFETIME: f32 = 3.0;
 const PROJECTILE_COOLDOWN: f32 = 0.2;
 

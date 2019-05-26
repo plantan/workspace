@@ -32,25 +32,32 @@ impl behavior::ShipBehavior for EnemyShipBehavior {
         _dt: f32,
         api: &mut behavior::ShipBehaviorApi,
     ) {
-        let mut point_of_interest = Point2::origin();
+        let mut point_of_interest_opt = None;
 
         // Check scan results from last frame
         let scan_results_last_frame = self.scan_result.latest();
         for (idx, opt) in scan_results_last_frame.hits.iter().enumerate() {
             if opt.is_some() {
-                let ray_hit = opt.unwrap();
-
                 let origin = scan_results_last_frame.origin;
                 let dir = scan_results_last_frame.directions[idx];
-                point_of_interest = origin + dir * ray_hit.t;
+                point_of_interest_opt = Some(origin + dir * opt.unwrap().t);
+                break;
             }
         }
 
-        let thrust = ship.velocity * 0.3;
-        api.set_thrust(thrust);
+        let mut thrust = Vector2::zeros();
+        let mut torque = -ship.spin;
 
-        let new_torque = player::calculate_player_ship_torque_for_aim(point_of_interest - ship.position, ship.rotation, ship.spin);
-        api.set_torque(new_torque);
+        if point_of_interest_opt.is_some() {
+            let point_of_interest = point_of_interest_opt.unwrap();
+            let to_point_of_interest = ship.position - point_of_interest;
+            
+            thrust = to_point_of_interest * 0.1;
+            torque = player::calculate_player_ship_torque_for_aim(point_of_interest - ship.position, ship.rotation, ship.spin);
+        }
+
+        api.set_thrust(thrust + ship.velocity * 0.5);
+        api.set_torque(torque - ship.spin * 5.0);
 
         api.shoot();
         api.scan(&self.scan_directions, &self.scan_result);

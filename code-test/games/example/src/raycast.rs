@@ -31,28 +31,25 @@ impl RaycastProcessor {
 impl ct::raycast::RaycastProcessor for RaycastProcessor {
     fn process_raycasts(&self, _rays: &[ct::raycast::Raycast], _hits: &mut [Option<ct::raycast::RayHit>]) {
         for (idx, raycast) in _rays.iter().enumerate() {
-            let start = raycast.origin + raycast.direction * raycast.t_min;
-            let end = raycast.origin + raycast.direction * 50.0;
-            let ray = end - start;
+            let end = raycast.origin + raycast.direction * 1000.0;
+            let ray = end - raycast.origin;
 
-            // let mut closest_hit_target: RaycastTarget;
-            // let mut shortest_target_ray: f32;
-            _hits[idx] = None;
-
+            // TODO: Pick ray hit with shortest length
+            
             for target in &self.targets[..] {
                 let to_target = target.position - raycast.origin;
                 let projection_scalar = to_target.dot(&ray) / ray.dot(&ray);
+
                 if projection_scalar <= 0.0 {
                     continue;
                 }
 
-                let projection = projection_scalar * ray;
-                let target_to_projection = Point2::from_coordinates(projection) - target.position;
-                let projection_mag = target_to_projection.dot(&target_to_projection).sqrt();
+                let projection = raycast.origin.coords + projection_scalar * ray;
+                let target_to_projection = projection - target.position.coords;
 
-                if projection_mag <= target.radius {
+                if target_to_projection.dot(&target_to_projection).sqrt() <= target.radius {
                     // We have a hit!
-                    let to_hit = Point2::from_coordinates(projection) - start;
+                    let to_hit = Point2::from_coordinates(projection) - raycast.origin;
                     let ray_hit = ct::raycast::RayHit { kind: raycast::RayHitKind::Ship, t: to_hit.dot(&to_hit).sqrt() };
                     _hits[idx] = Some(ray_hit);
                     break;

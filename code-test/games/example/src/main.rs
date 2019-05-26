@@ -28,8 +28,7 @@ impl ct::game::CodeTestImpl for MyGame {
     fn new(ctx: &mut Context) -> Self {
         let (player_input_tx, player_input_rx) = sync_channel(1);
         let mut ship_factory = ship_factory::ShipFactory::new(player_input_rx);
-        ship_factory.create_ship(true);
-        ship_factory.create_ship(false);
+        ship_factory.create_enemy_ship();
 
         Self {
             player_input_tx,
@@ -68,7 +67,7 @@ impl ct::game::CodeTestImpl for MyGame {
         
         let actions = &self.ship_behavior_processor.get_actions();
         for i in 0..actions.len() {
-            let ship_info = &mut self.ship_factory.get_ship_info(i).0;
+            let ship_info = &mut self.ship_factory.get_ship_info(i);
 
             let action = &actions[i];
             ct::sim::simulate_ship(
