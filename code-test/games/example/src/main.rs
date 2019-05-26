@@ -15,6 +15,7 @@ struct MyGame {
     ship_factory: ship_factory::ShipFactory,
     projectile_shooter: projectile::ProjectileShooter,
     raycast_processor: raycast::RaycastProcessor,
+    pressed_shoot_prev_frame: bool, 
 
     // Utilities for drawing the ship.
     gfx_util: ct::gfx::GfxUtil,
@@ -35,6 +36,7 @@ impl ct::game::CodeTestImpl for MyGame {
             ship_factory,
             projectile_shooter: projectile::ProjectileShooter::new(),
             raycast_processor: raycast::RaycastProcessor::new(),
+            pressed_shoot_prev_frame: false,
             gfx_util: ct::gfx::GfxUtil::new(ctx),
             ship_behavior_processor: ct::behavior::ShipBehaviorProcessor::new(),
         }
@@ -48,10 +50,16 @@ impl ct::game::CodeTestImpl for MyGame {
         // We need them here for mouse aim.
         self.gfx_util.calculate_view_transform(ctx, Point2::origin(), 1.0);
 
+        // Override input to LMB since it seems to return true for
+        // every frame, and not only for the LMB down event
+        let mut player_input_clone = player_input.clone();
+        player_input_clone.shoot = player_input_clone.shoot && !self.pressed_shoot_prev_frame;
+        self.pressed_shoot_prev_frame = player_input.shoot;
+        
         // Use the calculated camera transformation to find the word position
         // of the mouse cursor, and send the input to the player ship behavior.
         self.player_input_tx
-            .send(self.gfx_util.screen_to_world(player_input))
+            .send(self.gfx_util.screen_to_world(player_input_clone))
             .ok();
 
         self.ship_behavior_processor.run_behaviors(

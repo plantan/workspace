@@ -59,7 +59,8 @@ impl behavior::ShipBehavior for EnemyShipBehavior {
         api.set_thrust(thrust + ship.velocity * 0.5);
         api.set_torque(torque - ship.spin * 5.0);
 
-        api.shoot();
+        //api.shoot();
+        
         api.scan(&self.scan_directions, &self.scan_result);
     }
 }

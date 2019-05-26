@@ -7,7 +7,6 @@ use std::f32::consts;
 // that works for both projectiles and asteroids!
 
 const PROJECTILE_LIFETIME: f32 = 3.0;
-const PROJECTILE_COOLDOWN: f32 = 0.2;
 
 pub enum ProjectileType {
     Projectile,
@@ -24,23 +23,18 @@ struct Projectile {
 
 pub struct ProjectileShooter {
     projectiles: Vec<Projectile>,
-    recycle_indices: VecDeque<usize>,
-    cooldown: f32
+    recycle_indices: VecDeque<usize>
 }
 
 impl ProjectileShooter {
     pub fn new() -> Self {
         Self {
             projectiles: Vec::with_capacity(10),
-            recycle_indices: VecDeque::with_capacity(10),
-            cooldown: 0.0
+            recycle_indices: VecDeque::with_capacity(10)
         } 
     }
 
     pub fn fire(&mut self, position: Point2, mut rotation: f32, projectile_type: ProjectileType) {
-        if self.cooldown > 0.0 { return; }
-        self.cooldown = PROJECTILE_COOLDOWN;
-
         let direction = Vector2::new(rotation.cos(), rotation.sin()).normalize();
         rotation += consts::PI * 0.5; // Hack for rotation!
 
@@ -67,8 +61,6 @@ impl ProjectileShooter {
     }
 
     pub fn update(&mut self, dt: f32) {
-        self.cooldown -= dt;
-
         for i in 0..self.projectiles.len() {
             let projectile = &mut self.projectiles[i];
 

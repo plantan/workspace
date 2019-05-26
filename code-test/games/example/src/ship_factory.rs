@@ -41,6 +41,7 @@ impl ShipFactory {
 
     pub fn get_ship_info(&mut self, index: usize) -> &mut behavior::BehaviorShipInfo {
         if index == 0 {
+            // Player is always at index 0
             &mut self.player.0
         } else {
             &mut self.enemies[index - 1].0
