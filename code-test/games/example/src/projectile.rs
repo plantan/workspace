@@ -2,21 +2,31 @@ use code_test_lib::{ prelude::*, gfx };
 use super::collision;
 use std::collections::VecDeque;
 use std::f32::consts;
+use rand::Rng;
 
 const LASER_LIFETIME: f32 = 3.0;
 const ASTEROID_LIFETIME: f32 = 999.0;
 
-#[derive(PartialEq)]
+fn get_projectile_radius(projectile_type: &ProjectileType) -> f32 {
+    match projectile_type {
+        ProjectileType::Asteroid => rand::thread_rng().gen_range(0.1, 0.2),
+        ProjectileType::Laser => 0.1
+    }
+}
+
+#[derive(PartialEq, Clone)]
 pub enum ProjectileType {
     Laser,
     Asteroid
 }
 
+#[derive(Clone)]
 struct Projectile {
     lifetime: f32,
     velocity: Vector2,
     rotation: f32,
     position: Point2,
+    radius: f32,
     projectile_type: ProjectileType,
     collision_handle: usize
 }
@@ -39,36 +49,40 @@ impl ProjectileShooter {
         velocity: Vector2,
         mut rotation: f32,
         projectile_type: ProjectileType,
-        collision_processor: &mut collision::CollisionProcessor)
+        collision_processor: &mut collision::CollisionSystem)
     {
         rotation += consts::PI * 0.5; // Hack for rotation!
+
+        let radius = get_projectile_radius(&projectile_type);
+
+        let team = match projectile_type {
+            ProjectileType::Laser => 3,
+            ProjectileType::Asteroid => 6
+        };
 
         let lifetime = match projectile_type {
             ProjectileType::Laser => LASER_LIFETIME,
             ProjectileType::Asteroid => ASTEROID_LIFETIME
         };
 
+        let new_projectile = Projectile {
+            lifetime,
+            velocity,
+            rotation,
+            position,
+            radius,
+            projectile_type,
+            collision_handle: collision_processor.create_collider(position, radius, team)
+        };
+
         let recycle_index = self.recycle_indices.pop_front();
         if recycle_index.is_some() {
-            let projectile = &mut self.projectiles[recycle_index.unwrap()];
-            projectile.position = position;
-            projectile.velocity = velocity;
-            projectile.rotation = rotation;
-            projectile.lifetime = lifetime;
-            projectile.projectile_type = projectile_type;
-
-            // Projectile recycled, just return
+            // Recycle array element position and return
+            self.projectiles[recycle_index.unwrap()] = new_projectile;
             return;
         }
 
-        self.projectiles.push(Projectile {
-            lifetime: lifetime,
-            velocity,
-            rotation,
-            position: position,
-            projectile_type,
-            collision_handle: collision_processor.create_collider(position, 0.1, 1)
-        });
+        self.projectiles.push(new_projectile);
     }
 
     pub fn count_alive(&self, projectile_type: ProjectileType) -> u32 {
@@ -85,18 +99,19 @@ impl ProjectileShooter {
     pub fn update(&mut self,
         screen_size: (u32, u32),
         world_to_screen: graphics::Matrix4,
-        collision_processor: &collision::CollisionProcessor,
+        collision_system: &mut collision::CollisionSystem,
         dt: f32)
     {
         for i in 0..self.projectiles.len() {
             let projectile = &mut self.projectiles[i];
 
-            // Only update projectile with remaining lifetime
+            // Only update projectiles with remaining lifetime
             if projectile.lifetime > 0.0 {
-                // let didCollideLastFrame = collision_processor.get_state(projectile.collision_handle);
-                // if didCollideLastFrame {
-                //     projectile.lifetime = 0.0;
-                // }
+                let did_collide_last_frame = collision_system.check_collider(projectile.collision_handle);
+                if did_collide_last_frame {
+                    // Kill projectile by setting it's lifetime to 0
+                    projectile.lifetime = 0.0;
+                }
                 
                 projectile.lifetime -= dt;
                 if projectile.lifetime <= 0.0 {
@@ -115,7 +130,7 @@ impl ProjectileShooter {
                     projectile.position.y = -projectile.position.y;
                 }
 
-                collision_processor.move_collider(projectile.collision_handle, projectile.position);
+                collision_system.update_collider(projectile.collision_handle, projectile.position, projectile.radius);
             }
         }
     }
@@ -135,7 +150,7 @@ impl ProjectileShooter {
                     asteroids.push(gfx::AsteroidDrawData {
                         position: projectile.position,
                         rotation: projectile.rotation,
-                        radius: 0.1
+                        radius: projectile.radius
                     });
                 },
 

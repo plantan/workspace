@@ -15,7 +15,7 @@ struct MyGame {
 
     ship_factory: ship_factory::ShipFactory,
     raycast_processor: raycast::RaycastProcessor,
-    collision_processor: collision::CollisionProcessor,
+    collision_system: collision::CollisionSystem,
     pressed_shoot_prev_frame: bool,
 
     projectile_shooter: projectile::ProjectileShooter,
@@ -32,7 +32,7 @@ impl MyGame {
     fn update_asteroid_spawning(&mut self, dt: f32) {
         self.asteroid_spawn_timer -= dt;
         if self.asteroid_spawn_timer < 0.0 {
-            self.asteroid_spawn_timer = 3.0;
+            self.asteroid_spawn_timer = 1.0;
 
             let mut rng = rand::thread_rng();
             let r = rng.gen_range(0.0, consts::PI * 2.0) as f32;
@@ -40,7 +40,7 @@ impl MyGame {
             let random_pos = Point2::new(r.cos(), r.sin()) * rng.gen_range(1.0, 2.0) as f32;
             let random_target = Point2::new(rng.gen_range(-1.0, 1.0), rng.gen_range(-1.0, 1.0));
             let velocity = (random_target - random_pos).normalize() * rng.gen_range(0.05, 0.3);
-            self.projectile_shooter.fire(random_pos, velocity, r, projectile::ProjectileType::Asteroid, &mut self.collision_processor);
+            self.projectile_shooter.fire(random_pos, velocity, r, projectile::ProjectileType::Asteroid, &mut self.collision_system);
         }
     }
 }
@@ -54,7 +54,7 @@ impl ct::game::CodeTestImpl for MyGame {
             player_input_tx,
             ship_factory: ship_factory::ShipFactory::new(player_input_rx),
             raycast_processor: raycast::RaycastProcessor::new(),
-            collision_processor: collision::CollisionProcessor::new(),
+            collision_system: collision::CollisionSystem::new(),
             pressed_shoot_prev_frame: false,
 
             projectile_shooter: projectile::ProjectileShooter::new(),
@@ -91,6 +91,8 @@ impl ct::game::CodeTestImpl for MyGame {
             dt
         );
 
+        self.collision_system.test_collisions_and_cache_result();
+
         // Once behaviors have executed, evaluate their visibility raycasts,
         // as they will be needed in the next frame.
         self.ship_behavior_processor.process_raycasts(&self.raycast_processor);
@@ -108,7 +110,7 @@ impl ct::game::CodeTestImpl for MyGame {
                     velocity, 
                     rotation, 
                     projectile::ProjectileType::Laser, 
-                    &mut self.collision_processor
+                    &mut self.collision_system
                 );
             }
 
@@ -119,7 +121,7 @@ impl ct::game::CodeTestImpl for MyGame {
         self.update_asteroid_spawning(dt);
         self.projectile_shooter.update(graphics::get_size(ctx), 
             self.gfx_util.world_to_screen, 
-            &self.collision_processor, 
+            &mut self.collision_system, 
             dt
         );
     }
@@ -127,6 +129,10 @@ impl ct::game::CodeTestImpl for MyGame {
     fn draw(&mut self, ctx: &mut Context) {
         graphics::clear(ctx);
         self.gfx_util.apply_view_transform(ctx);
+
+        for c in &self.collision_system.colliders[..] {
+            graphics::circle(ctx, DrawMode::Fill, c.position, c.radius, 1.0).ok();
+        }
 
         let (projectile_draw_data, asteroid_draw_data) = self.projectile_shooter.create_draw_data();
         self.gfx_util.draw_projectiles(ctx, projectile_draw_data.into_iter());

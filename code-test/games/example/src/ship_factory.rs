@@ -26,7 +26,7 @@ fn copy_ship_info(ship_behavior_info: &behavior::BehaviorShipInfo) -> behavior::
 pub struct ShipFactory {
     player: (behavior::BehaviorShipInfo, player::PlayerShipBehavior),
     enemies: Vec<(behavior::BehaviorShipInfo, enemy::EnemyShipBehavior)>
-    //collision_handles+
+    // collision_handles
 }
 
 impl ShipFactory {
@@ -37,8 +37,8 @@ impl ShipFactory {
         }
     }
 
-    pub fn create_enemy_ship(&mut self, collision_processor: &mut collision::CollisionProcessor) {
-        let collision_handle = collision_processor.create_collider(Point2::origin(), code_test_lib::SHIP_RADIUS, 0);
+    pub fn create_enemy_ship(&mut self, collision_processor: &mut collision::CollisionSystem) {
+        // let collision_handle = collision_processor.create_collider(Point2::origin(), code_test_lib::SHIP_RADIUS, 0);
         self.enemies.push((create_empty_ship_info(), enemy::EnemyShipBehavior::new()));
     }
 
