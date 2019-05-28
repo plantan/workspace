@@ -1,8 +1,9 @@
-use code_test_lib:: { behavior, prelude::*, player };
+use code_test_lib:: { behavior, prelude::*, player, sim };
 use std::collections::VecDeque;
-use super::ct::gfx;
 use std::sync::mpsc::Receiver;
+use super::ct::gfx;
 use super::enemy;
+use super::collision;
 
 fn create_empty_ship_info() -> behavior::BehaviorShipInfo {
     behavior::BehaviorShipInfo {
@@ -13,7 +14,7 @@ fn create_empty_ship_info() -> behavior::BehaviorShipInfo {
     }
 }
 
-fn copy_behavior_ship_info(ship_behavior_info: &behavior::BehaviorShipInfo) -> behavior::BehaviorShipInfo {
+fn copy_ship_info(ship_behavior_info: &behavior::BehaviorShipInfo) -> behavior::BehaviorShipInfo {
     behavior::BehaviorShipInfo {
         position: ship_behavior_info.position,
         velocity: ship_behavior_info.velocity,
@@ -24,18 +25,20 @@ fn copy_behavior_ship_info(ship_behavior_info: &behavior::BehaviorShipInfo) -> b
 
 pub struct ShipFactory {
     player: (behavior::BehaviorShipInfo, player::PlayerShipBehavior),
-    enemies: Vec<(behavior::BehaviorShipInfo, enemy::EnemyShipBehavior)>,
+    enemies: Vec<(behavior::BehaviorShipInfo, enemy::EnemyShipBehavior)>
+    //collision_handles+
 }
 
 impl ShipFactory {
     pub fn new(input_channel: Receiver<player::PlayerInput>) -> Self {
         Self {
             player: (create_empty_ship_info(), player::PlayerShipBehavior::new(input_channel)),
-            enemies: Vec::with_capacity(10),
+            enemies: Vec::with_capacity(10)
         }
     }
 
-    pub fn create_enemy_ship(&mut self) {
+    pub fn create_enemy_ship(&mut self, collision_processor: &mut collision::CollisionProcessor) {
+        let collision_handle = collision_processor.create_collider(Point2::origin(), code_test_lib::SHIP_RADIUS, 0);
         self.enemies.push((create_empty_ship_info(), enemy::EnemyShipBehavior::new()));
     }
 
@@ -67,6 +70,22 @@ impl ShipFactory {
 
         ship_draw_data
     }
+
+    pub fn update(&mut self, actions: &[behavior::ShipAction], dt: f32) {
+        for i in 0..actions.len() {
+            let ship_info = &mut self.get_ship_info(i);
+
+            let action = &actions[i];
+            sim::simulate_ship(
+                action.controls,
+                dt,
+                &mut ship_info.position, 
+                &mut ship_info.velocity,
+                &mut ship_info.rotation,
+                &mut ship_info.spin,
+            );
+        }
+    }
 }
 
 pub struct ShipFactoryIterator<'a> {
@@ -77,11 +96,11 @@ impl<'a> ShipFactoryIterator<'a> {
     pub fn new(ship_factory: &'a mut ShipFactory) -> Self {
         let mut ship_queue = VecDeque::with_capacity(ship_factory.enemies.len() + 1);
 
-        let player_copy = copy_behavior_ship_info(&ship_factory.player.0);
+        let player_copy = copy_ship_info(&ship_factory.player.0);
         ship_queue.push_back((player_copy, &mut ship_factory.player.1 as &mut behavior::ShipBehavior));
 
         for (ship_info, behavior) in &mut ship_factory.enemies[..] {
-            let copy = copy_behavior_ship_info(ship_info);
+            let copy = copy_ship_info(ship_info);
             ship_queue.push_back((copy, &mut(*behavior) as &mut behavior::ShipBehavior));
         }
 

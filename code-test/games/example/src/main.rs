@@ -1,10 +1,11 @@
 use code_test_lib as ct;
 use code_test_lib::prelude::*;
 use std::f32::consts;
+use rand::Rng;
 
 pub mod enemy;
-pub mod collision;
 pub mod projectile;
+pub mod collision;
 mod raycast;
 mod ship_factory;
 
@@ -13,9 +14,12 @@ struct MyGame {
     player_input_tx: SyncSender<ct::player::PlayerInput>,
 
     ship_factory: ship_factory::ShipFactory,
-    projectile_shooter: projectile::ProjectileShooter,
     raycast_processor: raycast::RaycastProcessor,
-    pressed_shoot_prev_frame: bool, 
+    collision_processor: collision::CollisionProcessor,
+    pressed_shoot_prev_frame: bool,
+
+    projectile_shooter: projectile::ProjectileShooter,
+    asteroid_spawn_timer: f32,
 
     // Utilities for drawing the ship.
     gfx_util: ct::gfx::GfxUtil,
@@ -24,19 +28,38 @@ struct MyGame {
     ship_behavior_processor: ct::behavior::ShipBehaviorProcessor,
 }
 
+impl MyGame {
+    fn update_asteroid_spawning(&mut self, dt: f32) {
+        self.asteroid_spawn_timer -= dt;
+        if self.asteroid_spawn_timer < 0.0 {
+            self.asteroid_spawn_timer = 3.0;
+
+            let mut rng = rand::thread_rng();
+            let r = rng.gen_range(0.0, consts::PI * 2.0) as f32;
+
+            let random_pos = Point2::new(r.cos(), r.sin()) * rng.gen_range(1.0, 2.0) as f32;
+            let random_target = Point2::new(rng.gen_range(-1.0, 1.0), rng.gen_range(-1.0, 1.0));
+            let velocity = (random_target - random_pos).normalize() * rng.gen_range(0.05, 0.3);
+            self.projectile_shooter.fire(random_pos, velocity, r, projectile::ProjectileType::Asteroid, &mut self.collision_processor);
+        }
+    }
+}
+
 // Main entry points for the Code Test game.
 impl ct::game::CodeTestImpl for MyGame {
     fn new(ctx: &mut Context) -> Self {
         let (player_input_tx, player_input_rx) = sync_channel(1);
-        let mut ship_factory = ship_factory::ShipFactory::new(player_input_rx);
-        ship_factory.create_enemy_ship();
 
         Self {
             player_input_tx,
-            ship_factory,
-            projectile_shooter: projectile::ProjectileShooter::new(),
+            ship_factory: ship_factory::ShipFactory::new(player_input_rx),
             raycast_processor: raycast::RaycastProcessor::new(),
+            collision_processor: collision::CollisionProcessor::new(),
             pressed_shoot_prev_frame: false,
+
+            projectile_shooter: projectile::ProjectileShooter::new(),
+            asteroid_spawn_timer: 0.0,
+
             gfx_util: ct::gfx::GfxUtil::new(ctx),
             ship_behavior_processor: ct::behavior::ShipBehaviorProcessor::new(),
         }
@@ -52,50 +75,53 @@ impl ct::game::CodeTestImpl for MyGame {
 
         // Override input to LMB since it seems to return true for
         // every frame, and not only for the LMB down event
-        let mut player_input_clone = player_input.clone();
-        player_input_clone.shoot = player_input_clone.shoot && !self.pressed_shoot_prev_frame;
+        let mut player_input_override = player_input.clone();
+        player_input_override.shoot = player_input_override.shoot && !self.pressed_shoot_prev_frame;
         self.pressed_shoot_prev_frame = player_input.shoot;
         
-        // Use the calculated camera transformation to find the word position
+        // Use the calculated camera transformation to find the world position
         // of the mouse cursor, and send the input to the player ship behavior.
         self.player_input_tx
-            .send(self.gfx_util.screen_to_world(player_input_clone))
+            .send(self.gfx_util.screen_to_world(player_input_override))
             .ok();
 
         self.ship_behavior_processor.run_behaviors(
             ship_factory::ShipFactoryIterator::new(&mut self.ship_factory),
             &ct::behavior::BehaviorGameInfo { safe_radius: 1.0 },
-            dt,
+            dt
         );
 
         // Once behaviors have executed, evaluate their visibility raycasts,
         // as they will be needed in the next frame.
         self.ship_behavior_processor.process_raycasts(&self.raycast_processor);
-        self.raycast_processor.clear_targets();
-        
         let actions = &self.ship_behavior_processor.get_actions();
+        self.raycast_processor.clear_targets();
+
         for i in 0..actions.len() {
             let ship_info = &mut self.ship_factory.get_ship_info(i);
-
             let action = &actions[i];
-            ct::sim::simulate_ship(
-                action.controls,
-                dt,
-                &mut ship_info.position, 
-                &mut ship_info.velocity,
-                &mut ship_info.rotation,
-                &mut ship_info.spin,
-            );
 
             if action.shoot {
-                let rotation_offset = consts::PI * 0.5;
-                self.projectile_shooter.fire(ship_info.position, ship_info.rotation + rotation_offset, projectile::ProjectileType::Projectile);
+                let rotation = ship_info.rotation + consts::PI * 0.5;
+                let velocity = Vector2::new(rotation.cos(), rotation.sin()).normalize() * 3.5;
+                self.projectile_shooter.fire(ship_info.position, 
+                    velocity, 
+                    rotation, 
+                    projectile::ProjectileType::Laser, 
+                    &mut self.collision_processor
+                );
             }
 
             self.raycast_processor.add_target(ship_info.position, ct::SHIP_RADIUS);
         }
-
-        self.projectile_shooter.update(dt);
+        
+        self.ship_factory.update(actions, dt);
+        self.update_asteroid_spawning(dt);
+        self.projectile_shooter.update(graphics::get_size(ctx), 
+            self.gfx_util.world_to_screen, 
+            &self.collision_processor, 
+            dt
+        );
     }
 
     fn draw(&mut self, ctx: &mut Context) {

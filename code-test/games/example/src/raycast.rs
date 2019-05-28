@@ -1,6 +1,22 @@
 use code_test_lib:: { raycast, prelude::*, player };
 use code_test_lib as ct;
 
+pub fn test_ray_against_circle(ray_start: Point2, ray_end: Point2, circle_point: Point2, circle_radius: f32) -> bool {
+    let ray = ray_end - ray_start;
+
+    let to_target = circle_point - ray_start;
+    let projection_scalar = to_target.dot(&ray) / ray.dot(&ray);
+
+    if projection_scalar <= 0.0 {
+        return false;
+    }
+
+    let projection = ray_start + projection_scalar * ray;
+    let target_to_projection = projection - circle_point;
+
+    target_to_projection.dot(&target_to_projection).sqrt() <= circle_radius
+}
+
 #[derive(Copy, Clone)]
 struct RaycastTarget {
     position: Point2,
@@ -32,24 +48,10 @@ impl ct::raycast::RaycastProcessor for RaycastProcessor {
     fn process_raycasts(&self, _rays: &[ct::raycast::Raycast], _hits: &mut [Option<ct::raycast::RayHit>]) {
         for (idx, raycast) in _rays.iter().enumerate() {
             let end = raycast.origin + raycast.direction * 1000.0;
-            let ray = end - raycast.origin;
 
-            // TODO: Pick ray hit with shortest length
-            
             for target in &self.targets[..] {
-                let to_target = target.position - raycast.origin;
-                let projection_scalar = to_target.dot(&ray) / ray.dot(&ray);
-
-                if projection_scalar <= 0.0 {
-                    continue;
-                }
-
-                let projection = raycast.origin.coords + projection_scalar * ray;
-                let target_to_projection = projection - target.position.coords;
-
-                if target_to_projection.dot(&target_to_projection).sqrt() <= target.radius {
-                    // We have a hit!
-                    let to_hit = Point2::from_coordinates(projection) - raycast.origin;
+                if test_ray_against_circle(raycast.origin, end, target.position, target.radius) {
+                    let to_hit = target.position - raycast.origin;
                     let ray_hit = ct::raycast::RayHit { kind: raycast::RayHitKind::Ship, t: to_hit.dot(&to_hit).sqrt() };
                     _hits[idx] = Some(ray_hit);
                     break;
