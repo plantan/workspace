@@ -91,7 +91,7 @@ impl ct::game::CodeTestImpl for MyGame {
             dt
         );
 
-        self.collision_system.test_collisions_and_cache_result();
+        self.collision_system.test_colliders();
 
         // Once behaviors have executed, evaluate their visibility raycasts,
         // as they will be needed in the next frame.
@@ -131,7 +131,7 @@ impl ct::game::CodeTestImpl for MyGame {
         self.gfx_util.apply_view_transform(ctx);
 
         for c in &self.collision_system.colliders[..] {
-            graphics::circle(ctx, DrawMode::Fill, c.position, c.radius, 1.0).ok();
+            graphics::circle(ctx, DrawMode::Fill, c.position, c.radius, 100.0).ok();
         }
 
         let (projectile_draw_data, asteroid_draw_data) = self.projectile_shooter.create_draw_data();

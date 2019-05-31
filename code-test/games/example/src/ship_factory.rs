@@ -1,5 +1,6 @@
 use code_test_lib:: { behavior, prelude::*, player, sim };
 use std::collections::VecDeque;
+use std::collections::HashMap;
 use std::sync::mpsc::Receiver;
 use super::ct::gfx;
 use super::enemy;
@@ -25,8 +26,10 @@ fn copy_ship_info(ship_behavior_info: &behavior::BehaviorShipInfo) -> behavior::
 
 pub struct ShipFactory {
     player: (behavior::BehaviorShipInfo, player::PlayerShipBehavior),
-    enemies: Vec<(behavior::BehaviorShipInfo, enemy::EnemyShipBehavior)>
-    // collision_handles
+    enemies: Vec<(behavior::BehaviorShipInfo, enemy::EnemyShipBehavior)>,
+
+    // Creating separate container for collision handles since I can't modify ShipBehaviorInfo
+    // collision_handles: HashMap<&behavior::BehaviorShipInfo, usize>
 }
 
 impl ShipFactory {

@@ -4,13 +4,13 @@ use std::collections::VecDeque;
 use std::f32::consts;
 use rand::Rng;
 
-const LASER_LIFETIME: f32 = 3.0;
+const LASER_LIFETIME: f32 = 1.5;
 const ASTEROID_LIFETIME: f32 = 999.0;
 
 fn get_projectile_radius(projectile_type: &ProjectileType) -> f32 {
     match projectile_type {
         ProjectileType::Asteroid => rand::thread_rng().gen_range(0.1, 0.2),
-        ProjectileType::Laser => 0.1
+        ProjectileType::Laser => 0.05
     }
 }
 
@@ -65,6 +65,7 @@ impl ProjectileShooter {
             ProjectileType::Asteroid => ASTEROID_LIFETIME
         };
 
+        // Assuming this allocation takes place on the stack
         let new_projectile = Projectile {
             lifetime,
             velocity,
@@ -116,6 +117,7 @@ impl ProjectileShooter {
                 projectile.lifetime -= dt;
                 if projectile.lifetime <= 0.0 {
                     self.recycle_indices.push_back(i);
+                    collision_system.release_collider(projectile.collision_handle);
                     continue;
                 }
 
