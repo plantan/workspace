@@ -52,7 +52,10 @@ impl ct::raycast::RaycastProcessor for RaycastProcessor {
             for target in &self.targets[..] {
                 if test_ray_against_circle(raycast.origin, end, target.position, target.radius) {
                     let to_hit = target.position - raycast.origin;
-                    let ray_hit = ct::raycast::RayHit { kind: raycast::RayHitKind::Ship, t: to_hit.dot(&to_hit).sqrt() };
+                    let to_hit_mag = to_hit.dot(&to_hit).sqrt();
+                    if to_hit_mag < raycast.t_min { continue; }
+
+                    let ray_hit = ct::raycast::RayHit { kind: raycast::RayHitKind::Ship, t: to_hit_mag };
                     _hits[idx] = Some(ray_hit);
                     break;
                 }

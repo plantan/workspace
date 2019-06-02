@@ -48,13 +48,15 @@ impl MyGame {
 // Main entry points for the Code Test game.
 impl ct::game::CodeTestImpl for MyGame {
     fn new(ctx: &mut Context) -> Self {
-        let (player_input_tx, player_input_rx) = sync_channel(1);
+        let mut collision_system = collision::CollisionSystem::new();
+        let mut ship_factory = ship_factory::ShipFactory::new();
+        ship_factory.create_enemy(&mut collision_system);
 
         Self {
-            player_input_tx,
-            ship_factory: ship_factory::ShipFactory::new(player_input_rx),
+            player_input_tx: ship_factory.create_player(&mut collision_system),
+            ship_factory,
             raycast_processor: raycast::RaycastProcessor::new(),
-            collision_system: collision::CollisionSystem::new(),
+            collision_system,
             pressed_shoot_prev_frame: false,
 
             projectile_shooter: projectile::ProjectileShooter::new(),
@@ -100,7 +102,7 @@ impl ct::game::CodeTestImpl for MyGame {
         self.raycast_processor.clear_targets();
 
         for i in 0..actions.len() {
-            let ship_info = &mut self.ship_factory.get_ship_info(i);
+            let (ship_info, _) = &mut self.ship_factory.get_ship(i);
             let action = &actions[i];
 
             if action.shoot {
