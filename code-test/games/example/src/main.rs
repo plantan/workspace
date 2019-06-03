@@ -8,6 +8,7 @@ pub mod projectile;
 pub mod collision;
 mod raycast;
 mod ship_factory;
+mod audio;
 
 struct MyGame {
     // std::sync::mpsc::SyncSender for player input. PlayerShipBehavior receives it every frame.
@@ -51,6 +52,8 @@ impl ct::game::CodeTestImpl for MyGame {
         let mut collision_system = collision::CollisionSystem::new();
         let mut ship_factory = ship_factory::ShipFactory::new();
         ship_factory.create_enemy(&mut collision_system);
+
+        audio::play_music();
 
         Self {
             player_input_tx: ship_factory.create_player(&mut collision_system),
@@ -102,8 +105,24 @@ impl ct::game::CodeTestImpl for MyGame {
         self.raycast_processor.clear_targets();
 
         for i in 0..actions.len() {
-            let (ship_info, _) = &mut self.ship_factory.get_ship(i);
+            let collision_handle = self.ship_factory.get_ship_collision_handle(i);
+            if self.collision_system.check_collider(collision_handle) {
+                self.ship_factory.destroy_ship(i);
+                continue;
+            }
+
+            // Access ship info with same index as for actions, since there's one action for each ship
+            let ship_info = self.ship_factory.get_ship_info(i);
             let action = &actions[i];
+
+            ct::sim::simulate_ship(
+                action.controls,
+                dt,
+                &mut ship_info.position, 
+                &mut ship_info.velocity,
+                &mut ship_info.rotation,
+                &mut ship_info.spin,
+            );
 
             if action.shoot {
                 let rotation = ship_info.rotation + consts::PI * 0.5;
@@ -119,7 +138,6 @@ impl ct::game::CodeTestImpl for MyGame {
             self.raycast_processor.add_target(ship_info.position, ct::SHIP_RADIUS);
         }
         
-        self.ship_factory.update(actions, dt);
         self.update_asteroid_spawning(dt);
         self.projectile_shooter.update(graphics::get_size(ctx), 
             self.gfx_util.world_to_screen, 

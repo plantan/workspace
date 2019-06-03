@@ -1,4 +1,4 @@
-use code_test_lib:: { behavior, prelude::*, player, sim };
+use code_test_lib:: { behavior, prelude::*, player };
 use std::collections::VecDeque;
 use super::ct::gfx;
 use super::enemy;
@@ -34,13 +34,15 @@ struct ShipWrapper {
 }
 
 pub struct ShipFactory {
-    ships: Vec<ShipWrapper>
+    ships: Vec<ShipWrapper>,
+    recycle_indices: VecDeque<usize>
 }
 
 impl ShipFactory {
     pub fn new() -> Self {
         Self {
-            ships: Vec::new()
+            ships: Vec::new(),
+            recycle_indices: VecDeque::new()
         }
     }
 
@@ -61,25 +63,44 @@ impl ShipFactory {
             collision_handle: collision_processor.create_collider(Point2::origin(), code_test_lib::SHIP_RADIUS, 0)
         };
 
+        let recycle_index = self.recycle_indices.pop_front();
+        if recycle_index.is_some() {
+            // Recycle array element position and return
+            self.ships[recycle_index.unwrap()] = new_ship;
+            return;
+        }
+
         self.ships.push(new_ship);
     }
 
-    pub fn get_ship(&mut self, index: usize) -> (&mut behavior::BehaviorShipInfo, &mut BehaviorType) {
-        let ship = &mut self.ships[index];
-        (&mut ship.info, &mut ship.behavior_type)
+    pub fn destroy_ship(&mut self, index: usize) {
+        self.recycle_indices.push_back(index);
+    }
+
+    pub fn get_ship_info(&mut self, index: usize) -> &mut behavior::BehaviorShipInfo {
+        &mut self.ships[index].info
+    }
+
+    pub fn get_ship_collision_handle(&mut self, index: usize) -> usize {
+        self.ships[index].collision_handle
     }
     
     pub fn create_draw_data(&mut self, actions: &[behavior::ShipAction]) -> Vec<gfx::ShipDrawData> {
         let mut ship_draw_data: Vec<gfx::ShipDrawData> = Vec::new();
 
         for i in 0..actions.len() {
-            let (ship_info, behavior_type) = self.get_ship(i);
+            if self.recycle_indices.contains(&i) {
+                // The ship has been destroyed since it's up for recycling
+                continue;
+            }
+
+            let ship = &self.ships[i];
             let draw_data = gfx::ShipDrawData {
-                position: ship_info.position,
-                rotation: ship_info.rotation,
+                position: ship.info.position,
+                rotation: ship.info.rotation,
                 thrust: actions[i].controls.thrust,
 
-                ship_type: match behavior_type {
+                ship_type: match ship.behavior_type {
                     BehaviorType::Enemy(_) => gfx::DrawShipType::Enemy,
                     BehaviorType::Player(_) => gfx::DrawShipType::Player
                 }
@@ -89,22 +110,6 @@ impl ShipFactory {
         }
 
         ship_draw_data
-    }
-
-    pub fn update(&mut self, actions: &[behavior::ShipAction], dt: f32) {
-        for i in 0..actions.len() {
-            let (ship_info, _) = &mut self.get_ship(i);
-
-            let action = &actions[i];
-            sim::simulate_ship(
-                action.controls,
-                dt,
-                &mut ship_info.position, 
-                &mut ship_info.velocity,
-                &mut ship_info.rotation,
-                &mut ship_info.spin,
-            );
-        }
     }
 }
 
