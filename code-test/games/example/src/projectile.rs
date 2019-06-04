@@ -7,17 +7,23 @@ use rand::Rng;
 const LASER_LIFETIME: f32 = 1.5;
 const ASTEROID_LIFETIME: f32 = 999.0;
 
-fn get_projectile_radius(projectile_type: &ProjectileType) -> f32 {
+fn generate_projectile_radius(projectile_type: &ProjectileType) -> f32 {
     match projectile_type {
-        ProjectileType::Asteroid => rand::thread_rng().gen_range(0.1, 0.2),
-        ProjectileType::Laser => 0.05
+        ProjectileType::Laser => 0.05,
+        ProjectileType::Asteroid(is_split) => {
+            let (min, max) = match is_split {
+                true => (0.01, 0.04),
+                false => (0.05, 0.1)
+            };
+            rand::thread_rng().gen_range(min, max)
+        } 
     }
 }
 
 #[derive(PartialEq, Clone)]
 pub enum ProjectileType {
     Laser,
-    Asteroid
+    Asteroid(bool) // Flag for if this asteroid is a split
 }
 
 #[derive(Clone)]
@@ -47,22 +53,20 @@ impl ProjectileShooter {
     pub fn fire(&mut self,
         position: Point2,
         velocity: Vector2,
-        mut rotation: f32,
+        rotation: f32,
         projectile_type: ProjectileType,
-        collision_processor: &mut collision::CollisionSystem)
+        collision_system: &mut collision::CollisionSystem)
     {
-        rotation += consts::PI * 0.5; // Hack for rotation!
-
-        let radius = get_projectile_radius(&projectile_type);
+        let radius = generate_projectile_radius(&projectile_type);
 
         let team = match projectile_type {
-            ProjectileType::Laser => 3,
-            ProjectileType::Asteroid => 6
+            ProjectileType::Laser => 0,
+            ProjectileType::Asteroid(_) => 1
         };
 
         let lifetime = match projectile_type {
             ProjectileType::Laser => LASER_LIFETIME,
-            ProjectileType::Asteroid => ASTEROID_LIFETIME
+            ProjectileType::Asteroid(_) => ASTEROID_LIFETIME
         };
 
         // Assuming this allocation takes place on the stack
@@ -73,7 +77,7 @@ impl ProjectileShooter {
             position,
             radius,
             projectile_type,
-            collision_handle: collision_processor.create_collider(position, radius, team)
+            collision_handle: collision_system.create_collider(position, radius, team)
         };
 
         let recycle_index = self.recycle_indices.pop_front();
@@ -97,12 +101,13 @@ impl ProjectileShooter {
         count
     }
 
-    pub fn update(&mut self,
-        screen_size: (u32, u32),
-        world_to_screen: graphics::Matrix4,
+    pub fn move_projectiles(&mut self,
+        world_size: Vector2,
         collision_system: &mut collision::CollisionSystem,
         dt: f32)
     {
+        let mut asteroid_splits = Vec::new();
+
         for i in 0..self.projectiles.len() {
             let projectile = &mut self.projectiles[i];
 
@@ -110,6 +115,10 @@ impl ProjectileShooter {
             if projectile.lifetime > 0.0 {
                 let did_collide_last_frame = collision_system.check_collider(projectile.collision_handle);
                 if did_collide_last_frame {
+                    if projectile.projectile_type == ProjectileType::Asteroid(false) {
+                        asteroid_splits.push(projectile.position);
+                    }
+
                     // Kill projectile by setting it's lifetime to 0
                     projectile.lifetime = 0.0;
                 }
@@ -122,17 +131,18 @@ impl ProjectileShooter {
                 }
 
                 projectile.position += projectile.velocity * dt;
-
-                // Wrap world position
-                let screen_pos = world_to_screen * na::Vector4::new(projectile.position.x, projectile.position.y, 0.0, 1.0);
-                if screen_pos.x > screen_size.0 as f32 || screen_pos.x < 0.0 {
-                    projectile.position.x = -projectile.position.x;
-                }
-                if screen_pos.y > screen_size.1 as f32 || screen_pos.y < 0.0 {
-                    projectile.position.y = -projectile.position.y;
-                }
-
+                super::wrap_position(&mut projectile.position, &world_size, projectile.radius);
                 collision_system.update_collider(projectile.collision_handle, projectile.position, projectile.radius);
+            }
+        }
+
+        for split_pos in asteroid_splits {
+            let mut rng = rand::thread_rng();
+            let mut rotation = rng.gen_range(0.0, consts::PI * 2.0);
+            for _ in 0..4 {
+                let velocity = Vector2::new(rotation.cos(), rotation.sin()) * rng.gen_range(0.1, 0.2);
+                rotation += consts::PI * 0.5;
+                self.fire(split_pos, velocity, rng.gen_range(0.0, consts::PI * 2.0), ProjectileType::Asteroid(true), collision_system);
             }
         }
     }
@@ -148,7 +158,7 @@ impl ProjectileShooter {
 
             match projectile.projectile_type {
                 // Create asteroid draw data
-                ProjectileType::Asteroid => {
+                ProjectileType::Asteroid(_) => {
                     asteroids.push(gfx::AsteroidDrawData {
                         position: projectile.position,
                         rotation: projectile.rotation,

@@ -1,4 +1,4 @@
-use code_test_lib:: { raycast, prelude::*, player };
+use code_test_lib:: { raycast, prelude::* };
 use code_test_lib as ct;
 
 pub fn test_ray_against_circle(ray_start: Point2, ray_end: Point2, circle_point: Point2, circle_radius: f32) -> bool {

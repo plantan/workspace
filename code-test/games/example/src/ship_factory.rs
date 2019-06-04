@@ -34,21 +34,19 @@ struct ShipWrapper {
 }
 
 pub struct ShipFactory {
-    ships: Vec<ShipWrapper>,
-    recycle_indices: VecDeque<usize>
+    ships: Vec<ShipWrapper>
 }
 
 impl ShipFactory {
     pub fn new() -> Self {
         Self {
-            ships: Vec::new(),
-            recycle_indices: VecDeque::new()
+            ships: Vec::new()
         }
     }
 
-    pub fn create_player(&mut self, collision_processor: &mut collision::CollisionSystem) -> SyncSender<code_test_lib::player::PlayerInput> {
+    pub fn create_player(&mut self, collision_system: &mut collision::CollisionSystem) -> SyncSender<code_test_lib::player::PlayerInput> {
         let (player_input_tx, player_input_rx) = sync_channel(1);
-        self.create_ship(BehaviorType::Player(player::PlayerShipBehavior::new(player_input_rx)), collision_processor);
+        self.create_ship(BehaviorType::Player(player::PlayerShipBehavior::new(player_input_rx)), collision_system);
         player_input_tx
     }
 
@@ -63,38 +61,40 @@ impl ShipFactory {
             collision_handle: collision_processor.create_collider(Point2::origin(), code_test_lib::SHIP_RADIUS, 0)
         };
 
-        let recycle_index = self.recycle_indices.pop_front();
-        if recycle_index.is_some() {
-            // Recycle array element position and return
-            self.ships[recycle_index.unwrap()] = new_ship;
-            return;
-        }
-
         self.ships.push(new_ship);
     }
 
-    pub fn destroy_ship(&mut self, index: usize) {
-        self.recycle_indices.push_back(index);
+    pub fn destroy_ships(&mut self, destroy_indices: &[usize]) {
+        for i in destroy_indices {
+            self.ships.remove(*i);
+        }
+    }
+
+    pub fn get_ship_count(&mut self) -> usize {
+        self.ships.len()
     }
 
     pub fn get_ship_info(&mut self, index: usize) -> &mut behavior::BehaviorShipInfo {
         &mut self.ships[index].info
     }
 
-    pub fn get_ship_collision_handle(&mut self, index: usize) -> usize {
+    pub fn is_player(&self, index: usize) -> bool {
+        match self.ships[index].behavior_type {
+            BehaviorType::Player(_) => true,
+            BehaviorType::Enemy(_) => false,
+        }
+    }
+
+    pub fn get_ship_collision_handle(&self, index: usize) -> usize {
         self.ships[index].collision_handle
     }
     
     pub fn create_draw_data(&mut self, actions: &[behavior::ShipAction]) -> Vec<gfx::ShipDrawData> {
         let mut ship_draw_data: Vec<gfx::ShipDrawData> = Vec::new();
 
-        for i in 0..actions.len() {
-            if self.recycle_indices.contains(&i) {
-                // The ship has been destroyed since it's up for recycling
-                continue;
-            }
-
+        for i in 0..self.ships.len() {
             let ship = &self.ships[i];
+
             let draw_data = gfx::ShipDrawData {
                 position: ship.info.position,
                 rotation: ship.info.rotation,
