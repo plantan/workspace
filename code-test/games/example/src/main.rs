@@ -193,11 +193,10 @@ impl ct::game::CodeTestImpl for MyGame {
 
             if action.shoot {
                 let rotation = ship_info.rotation + consts::PI * 0.5;
-                //rotation += consts::PI * 0.5; // Hack for rotation!
                 let velocity = Vector2::new(rotation.cos(), rotation.sin()).normalize() * 3.5;
                 self.projectile_shooter.fire(ship_info.position, 
                     velocity, 
-                    rotation, 
+                    rotation + consts::PI * 0.5,
                     projectile::ProjectileType::Laser, 
                     &mut self.collision_system
                 );
