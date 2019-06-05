@@ -88,29 +88,6 @@ impl ShipFactory {
     pub fn get_ship_collision_handle(&self, index: usize) -> usize {
         self.ships[index].collision_handle
     }
-    
-    pub fn create_draw_data(&mut self, actions: &[behavior::ShipAction]) -> Vec<gfx::ShipDrawData> {
-        let mut ship_draw_data: Vec<gfx::ShipDrawData> = Vec::new();
-
-        for i in 0..self.ships.len() {
-            let ship = &self.ships[i];
-
-            let draw_data = gfx::ShipDrawData {
-                position: ship.info.position,
-                rotation: ship.info.rotation,
-                thrust: actions[i].controls.thrust,
-
-                ship_type: match ship.behavior_type {
-                    BehaviorType::Enemy(_) => gfx::DrawShipType::Enemy,
-                    BehaviorType::Player(_) => gfx::DrawShipType::Player
-                }
-            };
-
-            ship_draw_data.push(draw_data);
-        }
-
-        ship_draw_data
-    }
 }
 
 pub struct ShipFactoryIterator<'a> {

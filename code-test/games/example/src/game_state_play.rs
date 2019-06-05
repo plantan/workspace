@@ -1,20 +1,22 @@
 use code_test_lib as ct;
-use code_test_lib::prelude::*;
+use ct::prelude::*;
+use ct::gfx;
 use std::f32::consts;
 use rand::Rng;
 
+use super::audio::{ AudioRequester, AudioRequest };
 use super::raycast;
 use super::collision;
 use super::ship_factory;
-use super::audio;
 use super::projectile;
 use super::game_state;
 
 pub struct GameStatePlay {
-    // std::sync::mpsc::SyncSender for player input. PlayerShipBehavior receives it every frame.
     player_input_tx: SyncSender<ct::player::PlayerInput>,
 
     ship_factory: ship_factory::ShipFactory,
+    ship_draw_data: Vec<gfx::ShipDrawData>,
+
     raycast_processor: raycast::RaycastProcessor,
     collision_system: collision::CollisionSystem,
     pressed_shoot_prev_frame: bool,
@@ -22,11 +24,8 @@ pub struct GameStatePlay {
     projectile_shooter: projectile::ProjectileShooter,
     asteroid_spawn_timer: f32,
 
-    // Utilities for drawing the ship.
     gfx_util: ct::gfx::GfxUtil,
-
-    // Necessary to evaluate ship behaviors, even the player's.
-    ship_behavior_processor: ct::behavior::ShipBehaviorProcessor
+    ship_behavior_processor: ct::behavior::ShipBehaviorProcessor,
 }
 
 impl GameStatePlay {
@@ -37,6 +36,7 @@ impl GameStatePlay {
         Self {
             player_input_tx: ship_factory.create_player(&mut collision_system),
             ship_factory,
+            ship_draw_data: Vec::new(),
             raycast_processor: raycast::RaycastProcessor::new(),
             collision_system,
             pressed_shoot_prev_frame: false,
@@ -45,7 +45,7 @@ impl GameStatePlay {
             asteroid_spawn_timer: 0.0,
 
             gfx_util: ct::gfx::GfxUtil::new(ctx),
-            ship_behavior_processor: ct::behavior::ShipBehaviorProcessor::new()
+            ship_behavior_processor: ct::behavior::ShipBehaviorProcessor::new(),
         }
     }
 
@@ -76,19 +76,16 @@ impl GameStatePlay {
 }
 
 impl game_state::GameState for GameStatePlay {
-    fn enter(&mut self, ctx: &mut Context) {
-        audio::play_music();
-        //graphics::set_background_color(ctx, graphics::Color::new(0.0, 0.0, 0.0, 1.0));
+    fn enter(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester) {
+        audio_requester.add(AudioRequest::GameplayMusic(true));
+        graphics::set_background_color(ctx, graphics::Color::new(0.0, 0.0, 0.0, 1.0));
     }
 
-    fn exit(&mut self, ctx: &mut Context) {
-
+    fn exit(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester) {
+        audio_requester.add(AudioRequest::GameplayMusic(false));
     }
 
-    fn update(&mut self, ctx: &mut Context, player_input: ct::player::PlayerInput) -> bool {
-        // Duration::as_float_secs is unstable, so we calculate it ourselves
-        let dt: f32 = timer::get_delta(ctx).subsec_nanos().min(100_000_000) as f32 * 1e-9;
-
+    fn update(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester, player_input: ct::player::PlayerInput, dt: f32) -> bool {
         // Center the camera around the origin, and calculate its transformations.
         // We need them here for mouse aim.
         self.gfx_util.calculate_view_transform(ctx, Point2::origin(), 1.0);
@@ -123,12 +120,15 @@ impl game_state::GameState for GameStatePlay {
         let ship_count = self.ship_factory.get_ship_count();
         let mut ship_destroy_indices = Vec::new();
 
+        self.ship_draw_data.clear();
+
         for i in 0..ship_count {
             // Check ship collision first. Run game over if player ship has collided!
             let collision_handle = self.ship_factory.get_ship_collision_handle(i);
             if self.collision_system.check_collider(collision_handle) {
                 ship_destroy_indices.push(i);
 
+                // Player ship has collided! Time to end state!
                 if self.ship_factory.is_player(i) {
                     return true;
                 }
@@ -161,13 +161,24 @@ impl game_state::GameState for GameStatePlay {
                     projectile::ProjectileType::Laser, 
                     &mut self.collision_system
                 );
+
+                audio_requester.add(AudioRequest::Laser);
             }
+
+            self.ship_draw_data.push(gfx::ShipDrawData {
+                position: ship_info.position,
+                rotation: ship_info.rotation,
+                thrust: action.controls.thrust,
+                ship_type: match self.ship_factory.is_player(i) {
+                    false => gfx::DrawShipType::Enemy,
+                    true => gfx::DrawShipType::Player
+                }
+            });
         }
 
         self.ship_factory.destroy_ships(&ship_destroy_indices[..]);
         self.update_asteroid_spawning(world_size, dt);
         self.update_enemy_spawning(dt);
-        
         self.projectile_shooter.move_projectiles(world_size, &mut self.collision_system, dt);
 
         false
@@ -177,16 +188,15 @@ impl game_state::GameState for GameStatePlay {
         graphics::clear(ctx);
         self.gfx_util.apply_view_transform(ctx);
 
-        for c in &self.collision_system.colliders[..] {
-            graphics::circle(ctx, DrawMode::Fill, c.position, c.radius, 100.0).ok();
-        }
-
         let (projectile_draw_data, asteroid_draw_data) = self.projectile_shooter.create_draw_data();
         self.gfx_util.draw_projectiles(ctx, projectile_draw_data.into_iter());
         self.gfx_util.draw_asteroids(ctx, asteroid_draw_data.into_iter());
 
-        let actions = &self.ship_behavior_processor.get_actions();
-        let draw_data_iter = self.ship_factory.create_draw_data(actions).into_iter();
-        self.gfx_util.draw_ships(ctx, draw_data_iter);
+        // Copy draw data by hand. Is this really the only way?
+        let mut ship_draw_data = Vec::new();
+        for draw_data in &self.ship_draw_data[..] {
+            ship_draw_data.push(gfx::ShipDrawData { ..*draw_data });
+        }
+        self.gfx_util.draw_ships(ctx, ship_draw_data.into_iter());
     }
 }
