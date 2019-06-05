@@ -12,7 +12,7 @@ use super::projectile;
 use super::game_state;
 
 pub struct GameStatePlay {
-    player_input_tx: SyncSender<ct::player::PlayerInput>,
+    player_input_tx: Option<SyncSender<ct::player::PlayerInput>>,
 
     ship_factory: ship_factory::ShipFactory,
     ship_draw_data: Vec<gfx::ShipDrawData>,
@@ -30,15 +30,12 @@ pub struct GameStatePlay {
 
 impl GameStatePlay {
     pub fn new(ctx: &mut Context) -> Self {
-        let mut collision_system = collision::CollisionSystem::new();
-        let mut ship_factory = ship_factory::ShipFactory::new();
-
         Self {
-            player_input_tx: ship_factory.create_player(&mut collision_system),
-            ship_factory,
+            player_input_tx: None,
+            ship_factory: ship_factory::ShipFactory::new(),
             ship_draw_data: Vec::new(),
             raycast_processor: raycast::RaycastProcessor::new(),
-            collision_system,
+            collision_system: collision::CollisionSystem::new(),
             pressed_shoot_prev_frame: false,
 
             projectile_shooter: projectile::ProjectileShooter::new(),
@@ -77,6 +74,10 @@ impl GameStatePlay {
 
 impl game_state::GameState for GameStatePlay {
     fn enter(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester) {
+        self.ship_factory.tear_down();
+        self.projectile_shooter.tear_down();
+
+        self.player_input_tx = Some(self.ship_factory.create_player(&mut self.collision_system));
         audio_requester.add(AudioRequest::GameplayMusic(true));
         graphics::set_background_color(ctx, graphics::Color::new(0.0, 0.0, 0.0, 1.0));
     }
@@ -98,9 +99,9 @@ impl game_state::GameState for GameStatePlay {
         
         // Use the calculated camera transformation to find the world position
         // of the mouse cursor, and send the input to the player ship behavior.
-        self.player_input_tx
-            .send(self.gfx_util.screen_to_world(player_input_override))
-            .ok();
+        if let Some(s) = &self.player_input_tx {
+            s.send(self.gfx_util.screen_to_world(player_input_override)).ok();
+        }
 
         self.ship_behavior_processor.run_behaviors(
             ship_factory::ShipFactoryIterator::new(&mut self.ship_factory),

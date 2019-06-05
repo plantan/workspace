@@ -61,14 +61,14 @@ impl ct::game::CodeTestImpl for MyGame {
         let mut my_game = MyGame {
             game_state_intro: game_state::GameStateIntro::new(ctx),
             game_state_play: game_state_play::GameStatePlay::new(ctx),
-            game_state_death: game_state::GameStateDeath,
+            game_state_death: game_state::GameStateDeath::new(),
             current_game_state_type: GameStateType::Intro,
             audio_player: AudioPlayer::new(ctx)
         };
 
         let mut audio_requester = AudioRequester::new();
         my_game.get_game_state(my_game.current_game_state_type).enter(ctx, &mut audio_requester);
-        my_game.audio_player.play(audio_requester);
+        my_game.audio_player.play(ctx, audio_requester);
 
         my_game
     }
@@ -93,7 +93,7 @@ impl ct::game::CodeTestImpl for MyGame {
             self.current_game_state_type = new_game_state_type;
         }
 
-        self.audio_player.play(audio_requester);
+        self.audio_player.play(ctx, audio_requester);
     }
 
     fn draw(&mut self, ctx: &mut Context) {

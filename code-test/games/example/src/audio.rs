@@ -27,24 +27,16 @@ impl AudioRequester {
 }
 
 pub struct AudioPlayer {
-    intro_music: audio::Source,
+    music: Option<audio::Source>,
     confirm_sound: audio::Source,
-    gameplay_music: audio::Source,
-
     laser_sound_pool: [audio::Source; 5],
     laser_sound_pool_index: usize
 }
 
 impl AudioPlayer {
     pub fn new(ctx: &mut Context) -> Self {
-        let mut intro_music = audio::Source::new(ctx, "/solstice.wav").unwrap();
-        intro_music.set_repeat(false);
-
         let mut confirm_sound = audio::Source::new(ctx, "/confirm.wav").unwrap();
         confirm_sound.set_repeat(false);
-
-        let mut gameplay_music = audio::Source::new(ctx, "/gradius.wav").unwrap();
-        gameplay_music.set_repeat(false);
 
         let mut laser_sound_pool: [audio::Source; 5] = [
             audio::Source::new(ctx, "/laser.wav").unwrap(),
@@ -57,30 +49,40 @@ impl AudioPlayer {
         for laser_sound in &mut laser_sound_pool[..] { laser_sound.set_repeat(false); };
         
         Self {
-            intro_music,
+            music: None,
             confirm_sound,
-            gameplay_music,
             laser_sound_pool,
             laser_sound_pool_index: 0
         }
     }
 
-    pub fn play(&mut self, mut requester: AudioRequester) {
+    fn try_stop_music(&mut self) {
+        match &self.music {
+            Some(s) => s.stop(),
+            None => ()
+        }
+    }
+
+    pub fn play(&mut self, ctx: &mut Context, mut requester: AudioRequester) {
         while requester.requests.len() > 0 {
             match requester.requests.pop_back().unwrap() {
                 AudioRequest::IntroMusic(play) => {
                     if play {
-                        self.intro_music.play().ok();
+                        let music = audio::Source::new(ctx, "/solstice.wav").unwrap();
+                        music.play().ok();
+                        self.music = Some(music);
                     } else {
-                        self.intro_music.stop();
+                        self.try_stop_music();
                     }
                 },
 
                 AudioRequest::GameplayMusic(play) => {
                     if play {
-                        self.gameplay_music.play().ok();
+                        let music = audio::Source::new(ctx, "/gradius.wav").unwrap();
+                        music.play().ok();
+                        self.music = Some(music);
                     } else {
-                        self.gameplay_music.stop();
+                        self.try_stop_music();
                     }
                 },
 

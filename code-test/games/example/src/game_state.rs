@@ -24,7 +24,7 @@ impl GameStateIntro {
     pub fn new(ctx: &mut Context) -> Self {
         Self {
             start_game_text: Text::new(ctx, "START GAME!", &graphics::Font::default_font().unwrap()).unwrap(),
-            fade_into_gameplay_timer: FADE_INTO_GAMEPLAY_DURATION,
+            fade_into_gameplay_timer: 0.0,
             has_pressed_confirm: false,
             clear_color_fade: 0.6,
         }
@@ -34,6 +34,9 @@ impl GameStateIntro {
 impl GameState for GameStateIntro {
     fn enter(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester) {
         audio_requester.add(AudioRequest::IntroMusic(true));
+
+        self.has_pressed_confirm = false;
+        self.fade_into_gameplay_timer = FADE_INTO_GAMEPLAY_DURATION;
     }
 
     fn exit(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester) {
@@ -66,15 +69,21 @@ impl GameState for GameStateIntro {
     }
 }
 
-pub struct GameStateDeath;
+pub struct GameStateDeath {
+    game_over_timer: f32
+}
 
 impl GameStateDeath {
-
+    pub fn new() -> Self {
+        Self {
+            game_over_timer: 0.0
+        }
+    }
 }
 
 impl GameState for GameStateDeath {
     fn enter(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester) {
-        graphics::set_background_color(ctx, graphics::Color::new(1.0, 0.0, 0.0, 1.0));
+        self.game_over_timer = GAME_OVER_DURATION;
     }
 
     fn exit(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester) {
@@ -82,14 +91,13 @@ impl GameState for GameStateDeath {
     }
 
     fn update(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester, player_input: ct::player::PlayerInput, dt: f32) -> bool {
-        // let new_time = self.game_over_timer + dt;
-        // self.game_over_timer = (self.game_over_timer + dt).min(GAME_OVER_DURATION);
-
-        // if new_time > GAME_OVER_DURATION { self.reset(ctx); }
-        player_input.shoot
+        self.game_over_timer -= dt;
+        self.game_over_timer < 0.0
     }
 
     fn draw(&mut self, ctx: &mut Context) {
+        let p = self.game_over_timer / GAME_OVER_DURATION;
+        graphics::set_background_color(ctx, graphics::Color::new(p * p, 0.0, 0.0, 1.0));
         graphics::clear(ctx);
     }
 }

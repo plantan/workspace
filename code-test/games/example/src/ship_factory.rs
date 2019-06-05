@@ -1,6 +1,5 @@
 use code_test_lib:: { behavior, prelude::*, player };
 use std::collections::VecDeque;
-use super::ct::gfx;
 use super::enemy;
 use super::collision;
 
@@ -87,6 +86,10 @@ impl ShipFactory {
 
     pub fn get_ship_collision_handle(&self, index: usize) -> usize {
         self.ships[index].collision_handle
+    }
+
+    pub fn tear_down(&mut self) {
+        self.ships.clear();
     }
 }
 

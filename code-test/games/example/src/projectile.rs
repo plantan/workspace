@@ -178,4 +178,9 @@ impl ProjectileShooter {
 
         (lasers, asteroids)
     }
+
+    pub fn tear_down(&mut self) {
+        self.projectiles.clear();
+        self.recycle_indices.clear();
+    }
 }
