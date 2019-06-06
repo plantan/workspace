@@ -58,10 +58,12 @@ impl ct::game::CodeTestImpl for MyGame {
         let assets_dir = env::var("CARGO_MANIFEST_DIR").unwrap() + "\\assets";
         ctx.filesystem.mount(path::Path::new(&assets_dir), true);
 
+        let (score_sender, score_receiver) = sync_channel(1);
+
         let mut my_game = MyGame {
             game_state_intro: game_state::GameStateIntro::new(ctx),
-            game_state_play: game_state_play::GameStatePlay::new(ctx),
-            game_state_death: game_state::GameStateDeath::new(),
+            game_state_play: game_state_play::GameStatePlay::new(ctx, score_sender),
+            game_state_death: game_state::GameStateDeath::new(ctx, score_receiver),
             current_game_state_type: GameStateType::Intro,
             audio_player: AudioPlayer::new(ctx)
         };

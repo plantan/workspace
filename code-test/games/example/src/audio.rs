@@ -6,6 +6,7 @@ use std::collections::VecDeque;
 pub enum AudioRequest {
     IntroMusic(bool),
     GameplayMusic(bool),
+    GameOverMusic(bool),
     Laser,
     Confirm,
     Death,
@@ -92,7 +93,7 @@ impl AudioPlayer {
 
     pub fn play(&mut self, ctx: &mut Context, mut requester: AudioRequester) {
         while requester.requests.len() > 0 {
-            match requester.requests.pop_back().unwrap() {
+            match requester.requests.pop_front().unwrap() {
                 AudioRequest::IntroMusic(play) => {
                     if play {
                         self.music = Some(AudioPlayer::load_and_play_music(ctx, "/solstice.wav"));
@@ -104,6 +105,14 @@ impl AudioPlayer {
                 AudioRequest::GameplayMusic(play) => {
                     if play {
                         self.music = Some(AudioPlayer::load_and_play_music(ctx, "/gradius.wav"));
+                    } else {
+                        self.try_stop_music();
+                    }
+                },
+
+                AudioRequest::GameOverMusic(play) => {
+                    if play {
+                        self.music = Some(AudioPlayer::load_and_play_music(ctx, "/goemon.wav"));
                     } else {
                         self.try_stop_music();
                     }

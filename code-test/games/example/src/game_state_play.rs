@@ -1,6 +1,7 @@
 use code_test_lib as ct;
 use ct::{ prelude::*, gfx };
 use std::f32::consts;
+use graphics::{ self, Text };
 use rand::Rng;
 
 use super::audio::{ AudioRequester, AudioRequest };
@@ -11,6 +12,8 @@ use super::projectile;
 use super::game_state;
 
 pub struct GameStatePlay {
+    score: f32,
+    score_sender: SyncSender<u32>,
     player_input_tx: Option<SyncSender<ct::player::PlayerInput>>,
 
     ship_factory: ship_factory::ShipFactory,
@@ -28,8 +31,10 @@ pub struct GameStatePlay {
 }
 
 impl GameStatePlay {
-    pub fn new(ctx: &mut Context) -> Self {
+    pub fn new(ctx: &mut Context, score_sender: SyncSender<u32>) -> Self {
         Self {
+            score: 0.0,
+            score_sender,
             player_input_tx: None,
             ship_factory: ship_factory::ShipFactory::new(),
             ship_draw_data: Vec::new(),
@@ -88,9 +93,13 @@ impl game_state::GameState for GameStatePlay {
 
     fn exit(&mut self, _ctx: &mut Context, audio_requester: &mut AudioRequester) {
         audio_requester.add(AudioRequest::GameplayMusic(false));
+        self.score_sender.send(self.score as u32).ok();
     }
 
     fn update(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester, player_input: ct::player::PlayerInput, dt: f32) -> bool {
+        // You get score for each second you survive!
+        self.score += dt * 10.0;
+
         // Center the camera around the origin, and calculate its transformations.
         // We need them here for mouse aim.
         self.gfx_util.calculate_view_transform(ctx, Point2::origin(), 1.0);
@@ -199,11 +208,26 @@ impl game_state::GameState for GameStatePlay {
         self.gfx_util.draw_projectiles(ctx, projectile_draw_data.into_iter());
         self.gfx_util.draw_asteroids(ctx, asteroid_draw_data.into_iter());
 
-        // Copy draw data by hand. Not sure if this is considered idiomatic...
+        // Copy draw data by hand. Not sure if this is considered idiomatic.
         let mut ship_draw_data = Vec::new();
         for draw_data in &self.ship_draw_data[..] {
             ship_draw_data.push(gfx::ShipDrawData { ..*draw_data });
         }
         self.gfx_util.draw_ships(ctx, ship_draw_data.into_iter());
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Draw Score
+
+        let world_size = self.calc_world_size(ctx);
+        let draw_params = graphics::DrawParam {
+            dest: Point2::new(-world_size.x * 0.9, world_size.y * 0.3),
+            scale: graphics::Point2::new(-0.007, 0.007),
+            offset: Point2::new(0.0, 0.5),
+            rotation: consts::PI,
+            ..Default::default()
+        };
+
+        let score_text = Text::new(ctx, &(self.score as u32).to_string(), &graphics::Font::default_font().unwrap()).unwrap();
+        graphics::draw_ex(ctx, &score_text, draw_params).ok();
     }
 }
