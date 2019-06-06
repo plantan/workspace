@@ -3,6 +3,7 @@ use super::collision;
 use std::collections::VecDeque;
 use std::f32::consts;
 use rand::Rng;
+use super::audio::{ AudioRequester, AudioRequest };
 
 const LASER_LIFETIME: f32 = 1.5;
 const ASTEROID_LIFETIME: f32 = 999.0;
@@ -104,6 +105,7 @@ impl ProjectileShooter {
     pub fn move_projectiles(&mut self,
         world_size: Vector2,
         collision_system: &mut collision::CollisionSystem,
+        audio_requester: &mut AudioRequester,
         dt: f32)
     {
         let mut asteroid_splits = Vec::new();
@@ -131,12 +133,17 @@ impl ProjectileShooter {
                 }
 
                 projectile.position += projectile.velocity * dt;
-                super::wrap_position(&mut projectile.position, &world_size, projectile.radius);
+                if let ProjectileType::Asteroid(_) = projectile.projectile_type {
+                    super::wrap_position(&mut projectile.position, &world_size, projectile.radius);
+                }
+                
                 collision_system.update_collider(projectile.collision_handle, projectile.position, projectile.radius);
             }
         }
 
         for split_pos in asteroid_splits {
+            audio_requester.add(AudioRequest::Hit);
+
             let mut rng = rand::thread_rng();
             let mut rotation = rng.gen_range(0.0, consts::PI * 2.0);
             for _ in 0..4 {
@@ -179,7 +186,7 @@ impl ProjectileShooter {
         (lasers, asteroids)
     }
 
-    pub fn tear_down(&mut self) {
+    pub fn reset(&mut self) {
         self.projectiles.clear();
         self.recycle_indices.clear();
     }

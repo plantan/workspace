@@ -84,4 +84,9 @@ impl CollisionSystem {
             }
         }
     }
+
+    pub fn reset(&mut self) {
+        self.colliders.clear();
+        self.recycle_indices.clear();
+    }
 }

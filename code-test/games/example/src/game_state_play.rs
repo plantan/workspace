@@ -62,7 +62,6 @@ impl GameStatePlay {
     }
 
     fn update_enemy_spawning(&mut self, dt: f32) {
-        
     }
 
     fn calc_world_size(&self, ctx: &mut Context) -> Vector2 {
@@ -74,10 +73,13 @@ impl GameStatePlay {
 
 impl game_state::GameState for GameStatePlay {
     fn enter(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester) {
-        self.ship_factory.tear_down();
-        self.projectile_shooter.tear_down();
+        self.ship_factory.reset();
+        self.projectile_shooter.reset();
+        self.collision_system.reset();
 
         self.player_input_tx = Some(self.ship_factory.create_player(&mut self.collision_system));
+        self.ship_factory.create_enemy(&mut self.collision_system);
+
         audio_requester.add(AudioRequest::GameplayMusic(true));
         graphics::set_background_color(ctx, graphics::Color::new(0.0, 0.0, 0.0, 1.0));
     }
@@ -180,7 +182,7 @@ impl game_state::GameState for GameStatePlay {
         self.ship_factory.destroy_ships(&ship_destroy_indices[..]);
         self.update_asteroid_spawning(world_size, dt);
         self.update_enemy_spawning(dt);
-        self.projectile_shooter.move_projectiles(world_size, &mut self.collision_system, dt);
+        self.projectile_shooter.move_projectiles(world_size, &mut self.collision_system, audio_requester, dt);
 
         false
     }
@@ -188,6 +190,10 @@ impl game_state::GameState for GameStatePlay {
     fn draw(&mut self, ctx: &mut Context) {
         graphics::clear(ctx);
         self.gfx_util.apply_view_transform(ctx);
+
+        // for c in &self.collision_system.colliders[..] {
+        //     graphics::circle(ctx, DrawMode::Fill, c.position, c.radius, 100.0).ok();
+        // }
 
         let (projectile_draw_data, asteroid_draw_data) = self.projectile_shooter.create_draw_data();
         self.gfx_util.draw_projectiles(ctx, projectile_draw_data.into_iter());

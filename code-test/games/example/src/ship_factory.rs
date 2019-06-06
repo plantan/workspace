@@ -88,7 +88,7 @@ impl ShipFactory {
         self.ships[index].collision_handle
     }
 
-    pub fn tear_down(&mut self) {
+    pub fn reset(&mut self) {
         self.ships.clear();
     }
 }
