@@ -1,6 +1,5 @@
 use code_test_lib as ct;
-use ct::prelude::*;
-use ct::gfx;
+use ct::{ prelude::*, gfx };
 use std::f32::consts;
 use rand::Rng;
 
@@ -49,7 +48,10 @@ impl GameStatePlay {
     fn update_asteroid_spawning(&mut self, world_size: Vector2, dt: f32) {
         self.asteroid_spawn_timer -= dt;
         if self.asteroid_spawn_timer < 0.0 {
-            self.asteroid_spawn_timer = 1.0;
+            self.asteroid_spawn_timer = 2.0;
+
+            // Skip spawning if we already have too many splittable asteroids
+            if self.projectile_shooter.count_alive(projectile::ProjectileType::Asteroid(false)) > 3 { return; }
 
             let mut rng = rand::thread_rng();
             let r = rng.gen_range(0.0, consts::PI * 2.0) as f32;
@@ -126,7 +128,7 @@ impl game_state::GameState for GameStatePlay {
         self.ship_draw_data.clear();
 
         for i in 0..ship_count {
-            // Check ship collision first. Run game over if player ship has collided!
+            // Check ship collision first
             let collision_handle = self.ship_factory.get_ship_collision_handle(i);
             if self.collision_system.check_collider(collision_handle) {
                 ship_destroy_indices.push(i);
@@ -153,7 +155,7 @@ impl game_state::GameState for GameStatePlay {
 
             super::wrap_position(&mut ship_info.position, &world_size, ct::SHIP_RADIUS);
             self.collision_system.update_collider(collision_handle, ship_info.position, ct::SHIP_RADIUS);
-            self.raycast_processor.add_target(ship_info.position, ct::SHIP_RADIUS);
+            self.raycast_processor.add_target(ship_info.position, ct::SHIP_RADIUS, ct::raycast::RayHitKind::Ship);
 
             if action.shoot {
                 let rotation = ship_info.rotation + consts::PI * 0.5;
@@ -182,7 +184,12 @@ impl game_state::GameState for GameStatePlay {
         self.ship_factory.destroy_ships(&ship_destroy_indices[..]);
         self.update_asteroid_spawning(world_size, dt);
         self.update_enemy_spawning(dt);
-        self.projectile_shooter.move_projectiles(world_size, &mut self.collision_system, audio_requester, dt);
+        self.projectile_shooter.move_projectiles(world_size, 
+            &mut self.collision_system,
+            &mut self.raycast_processor,
+            audio_requester,
+            dt
+        );
 
         false
     }
@@ -199,7 +206,7 @@ impl game_state::GameState for GameStatePlay {
         self.gfx_util.draw_projectiles(ctx, projectile_draw_data.into_iter());
         self.gfx_util.draw_asteroids(ctx, asteroid_draw_data.into_iter());
 
-        // Copy draw data by hand. Is this really the only way?
+        // Copy draw data by hand. Not sure if this is idiomatic...
         let mut ship_draw_data = Vec::new();
         for draw_data in &self.ship_draw_data[..] {
             ship_draw_data.push(gfx::ShipDrawData { ..*draw_data });

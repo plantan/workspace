@@ -76,7 +76,7 @@ impl AudioPlayer {
     }
 
     // Creating new sound sorce for music every time we play it, since calling stop()
-    // on it seems to make it unplayable after
+    // on a Audio Source seems to make it unplayable after. Could this be a bug?
     fn load_and_play_music(ctx: &mut Context, path: &str) -> audio::Source {
         let music = audio::Source::new(ctx, path).unwrap();
         music.play().ok();

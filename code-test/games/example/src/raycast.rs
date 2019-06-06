@@ -35,8 +35,8 @@ impl RaycastProcessor {
         } 
     }
 
-    pub fn add_target(&mut self, position: Point2, radius: f32) {
-        self.targets.push(RaycastTarget { position, radius, kind: raycast::RayHitKind::Ship });
+    pub fn add_target(&mut self, position: Point2, radius: f32, kind: raycast::RayHitKind) {
+        self.targets.push(RaycastTarget { position, radius, kind });
     }
 
     pub fn clear_targets(&mut self) {
@@ -55,9 +55,8 @@ impl ct::raycast::RaycastProcessor for RaycastProcessor {
                     let to_hit_mag = to_hit.dot(&to_hit).sqrt();
                     if to_hit_mag < raycast.t_min { continue; }
 
-                    let ray_hit = ct::raycast::RayHit { kind: raycast::RayHitKind::Ship, t: to_hit_mag };
+                    let ray_hit = ct::raycast::RayHit { kind: target.kind, t: to_hit_mag };
                     _hits[idx] = Some(ray_hit);
-                    break;
                 }
             }
         }

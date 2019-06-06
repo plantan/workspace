@@ -1,8 +1,12 @@
-use code_test_lib::{ prelude::*, gfx };
-use super::collision;
+use code_test_lib as ct;
+use ct::{ prelude::*, gfx };
+
 use std::collections::VecDeque;
 use std::f32::consts;
 use rand::Rng;
+
+use super::raycast;
+use super::collision;
 use super::audio::{ AudioRequester, AudioRequest };
 
 const LASER_LIFETIME: f32 = 1.5;
@@ -105,6 +109,7 @@ impl ProjectileShooter {
     pub fn move_projectiles(&mut self,
         world_size: Vector2,
         collision_system: &mut collision::CollisionSystem,
+        raycast_processor: &mut raycast::RaycastProcessor,
         audio_requester: &mut AudioRequester,
         dt: f32)
     {
@@ -135,6 +140,7 @@ impl ProjectileShooter {
                 projectile.position += projectile.velocity * dt;
                 if let ProjectileType::Asteroid(_) = projectile.projectile_type {
                     super::wrap_position(&mut projectile.position, &world_size, projectile.radius);
+                    raycast_processor.add_target(projectile.position, projectile.radius, ct::raycast::RayHitKind::Asteroid);
                 }
                 
                 collision_system.update_collider(projectile.collision_handle, projectile.position, projectile.radius);
