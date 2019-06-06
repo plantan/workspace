@@ -33,10 +33,10 @@ pub struct AudioPlayer {
     confirm_sound: audio::Source,
     death_sound: audio::Source,
 
-    hit_sound_pool: [audio::Source; 5],
+    hit_sound_pool: Vec<audio::Source>,
     hit_sound_pool_index: usize,
 
-    laser_sound_pool: [audio::Source; 5],
+    laser_sound_pool: Vec<audio::Source>,
     laser_sound_pool_index: usize
 }
 
@@ -48,23 +48,8 @@ impl AudioPlayer {
         confirm_sound.set_repeat(false);
         death_sound.set_repeat(false);
 
-        let mut laser_sound_pool: [audio::Source; 5] = [
-            audio::Source::new(ctx, "/laser.wav").unwrap(),
-            audio::Source::new(ctx, "/laser.wav").unwrap(),
-            audio::Source::new(ctx, "/laser.wav").unwrap(),
-            audio::Source::new(ctx, "/laser.wav").unwrap(),
-            audio::Source::new(ctx, "/laser.wav").unwrap()
-        ];
-        for laser_sound in &mut laser_sound_pool[..] { laser_sound.set_repeat(false); };
-
-        let mut hit_sound_pool: [audio::Source; 5] = [
-            audio::Source::new(ctx, "/hit.wav").unwrap(),
-            audio::Source::new(ctx, "/hit.wav").unwrap(),
-            audio::Source::new(ctx, "/hit.wav").unwrap(),
-            audio::Source::new(ctx, "/hit.wav").unwrap(),
-            audio::Source::new(ctx, "/hit.wav").unwrap()
-        ];
-        for hit_sound in &mut hit_sound_pool[..] { hit_sound.set_repeat(false); };
+        let laser_sound_pool = AudioPlayer::create_audio_pool(ctx, "/laser.wav", 5);
+        let hit_sound_pool = AudioPlayer::create_audio_pool(ctx, "/hit.wav", 5);
         
         Self {
             music: None,
@@ -77,6 +62,17 @@ impl AudioPlayer {
             laser_sound_pool,
             laser_sound_pool_index: 0
         }
+    }
+
+    fn create_audio_pool(ctx: &mut Context, path: &str, size: usize) -> Vec<audio::Source> {
+        let mut pool = Vec::new();
+        for _ in 0..size {
+            let mut sound = audio::Source::new(ctx, path).unwrap();
+            sound.set_repeat(false);
+            pool.push(sound);
+        }
+
+        pool
     }
 
     fn try_stop_music(&mut self) {

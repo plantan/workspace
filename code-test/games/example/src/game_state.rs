@@ -47,7 +47,7 @@ impl GameState for GameStateIntro {
         self.start_game_text_blink = 0.0;
     }
 
-    fn exit(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester) {
+    fn exit(&mut self, _ctx: &mut Context, audio_requester: &mut AudioRequester) {
         
     }
 
@@ -119,11 +119,11 @@ impl GameState for GameStateDeath {
         self.game_over_timer = GAME_OVER_DURATION;
     }
 
-    fn exit(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester) {
+    fn exit(&mut self, _ctx: &mut Context, audio_requester: &mut AudioRequester) {
 
     }
 
-    fn update(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester, player_input: ct::player::PlayerInput, dt: f32) -> bool {
+    fn update(&mut self, _ctx: &mut Context, audio_requester: &mut AudioRequester, player_input: ct::player::PlayerInput, dt: f32) -> bool {
         self.game_over_timer -= dt;
         self.game_over_timer < 0.0
     }
