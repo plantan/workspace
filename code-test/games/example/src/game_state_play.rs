@@ -21,7 +21,6 @@ pub struct GameStatePlay {
 
     raycast_processor: raycast::RaycastProcessor,
     collision_system: collision::CollisionSystem,
-    pressed_shoot_prev_frame: bool,
 
     projectile_shooter: projectile::ProjectileShooter,
     asteroid_spawn_timer: f32,
@@ -40,7 +39,6 @@ impl GameStatePlay {
             ship_draw_data: Vec::new(),
             raycast_processor: raycast::RaycastProcessor::new(),
             collision_system: collision::CollisionSystem::new(),
-            pressed_shoot_prev_frame: false,
 
             projectile_shooter: projectile::ProjectileShooter::new(),
             asteroid_spawn_timer: 0.0,
@@ -83,6 +81,7 @@ impl game_state::GameState for GameStatePlay {
         self.ship_factory.reset();
         self.projectile_shooter.reset();
         self.collision_system.reset();
+        self.score = 0.0;
 
         self.player_input_tx = Some(self.ship_factory.create_player(&mut self.collision_system));
         self.ship_factory.create_enemy(&mut self.collision_system);
@@ -97,23 +96,17 @@ impl game_state::GameState for GameStatePlay {
     }
 
     fn update(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester, player_input: ct::player::PlayerInput, dt: f32) -> bool {
-        // You get score for each second you survive!
+        // You get 10 points for each second you survive!
         self.score += dt * 10.0;
 
         // Center the camera around the origin, and calculate its transformations.
         // We need them here for mouse aim.
         self.gfx_util.calculate_view_transform(ctx, Point2::origin(), 1.0);
-
-        // Override input to LMB since it seems to return true for
-        // every frame, and not only for the LMB down event
-        let mut player_input_override = player_input.clone();
-        player_input_override.shoot = player_input_override.shoot && !self.pressed_shoot_prev_frame;
-        self.pressed_shoot_prev_frame = player_input.shoot;
         
         // Use the calculated camera transformation to find the world position
         // of the mouse cursor, and send the input to the player ship behavior.
         if let Some(s) = &self.player_input_tx {
-            s.send(self.gfx_util.screen_to_world(player_input_override)).ok();
+            s.send(self.gfx_util.screen_to_world(player_input)).ok();
         }
 
         self.ship_behavior_processor.run_behaviors(
@@ -199,10 +192,6 @@ impl game_state::GameState for GameStatePlay {
     fn draw(&mut self, ctx: &mut Context) {
         graphics::clear(ctx);
         self.gfx_util.apply_view_transform(ctx);
-
-        // for c in &self.collision_system.colliders[..] {
-        //     graphics::circle(ctx, DrawMode::Fill, c.position, c.radius, 100.0).ok();
-        // }
 
         let (projectile_draw_data, asteroid_draw_data) = self.projectile_shooter.create_draw_data();
         self.gfx_util.draw_projectiles(ctx, projectile_draw_data.into_iter());

@@ -40,6 +40,7 @@ struct MyGame {
     game_state_death: game_state::GameStateDeath,
     current_game_state_type: GameStateType,
 
+    pressed_shoot_prev_frame: bool,
     audio_player: AudioPlayer
 }
 
@@ -58,6 +59,7 @@ impl ct::game::CodeTestImpl for MyGame {
         let assets_dir = env::var("CARGO_MANIFEST_DIR").unwrap() + "\\assets";
         ctx.filesystem.mount(path::Path::new(&assets_dir), true);
 
+        // Channel for sending final score from play state to death state
         let (score_sender, score_receiver) = sync_channel(1);
 
         let mut my_game = MyGame {
@@ -65,6 +67,7 @@ impl ct::game::CodeTestImpl for MyGame {
             game_state_play: game_state_play::GameStatePlay::new(ctx, score_sender),
             game_state_death: game_state::GameStateDeath::new(ctx, score_receiver),
             current_game_state_type: GameStateType::Intro,
+            pressed_shoot_prev_frame: false,
             audio_player: AudioPlayer::new(ctx)
         };
 
@@ -79,16 +82,22 @@ impl ct::game::CodeTestImpl for MyGame {
         // Duration::as_float_secs is unstable, so we calculate it ourselves
         let dt: f32 = timer::get_delta(ctx).subsec_nanos().min(100_000_000) as f32 * 1e-9;
 
+        // Override input to LMB since it seems to return true for
+        // every frame, and not only for the LMB down event
+        let mut player_input_override = player_input.clone();
+        player_input_override.shoot = player_input_override.shoot && !self.pressed_shoot_prev_frame;
+        self.pressed_shoot_prev_frame = player_input.shoot;
+
         let mut audio_requester = AudioRequester::new();
 
         let current_game_state = self.get_game_state(self.current_game_state_type);
-        if current_game_state.update(ctx, &mut audio_requester, player_input, dt) {
+        if current_game_state.update(ctx, &mut audio_requester, player_input_override, dt) {
             current_game_state.exit(ctx, &mut audio_requester);
 
             let (new_game_state, new_game_state_type) = match self.current_game_state_type {
                 GameStateType::Intro => (&mut self.game_state_play as &mut game_state::GameState, GameStateType::Play),
                 GameStateType::Play => (&mut self.game_state_death as &mut game_state::GameState, GameStateType::Death),
-                GameStateType::Death => (&mut self.game_state_intro as &mut game_state::GameState, GameStateType::Intro)
+                GameStateType::Death => (&mut self.game_state_play as &mut game_state::GameState, GameStateType::Play)
             };
 
             new_game_state.enter(ctx, &mut audio_requester);

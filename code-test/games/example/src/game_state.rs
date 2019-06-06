@@ -29,7 +29,7 @@ pub struct GameStateIntro {
 impl GameStateIntro {
     pub fn new(ctx: &mut Context) -> Self {
         Self {
-            start_game_text: Text::new(ctx, "PRESS A TO START GAME!", &graphics::Font::default_font().unwrap()).unwrap(),
+            start_game_text: Text::new(ctx, "PRESS LMB TO START GAME!", &graphics::Font::default_font().unwrap()).unwrap(),
             good_luck_text: Text::new(ctx, "STAY ALIVE! PROTECT ALLY!", &graphics::Font::default_font().unwrap()).unwrap(),
             mission_text: Text::new(ctx, "GOOD LUCK!", &graphics::Font::default_font().unwrap()).unwrap(),
             start_game_text_blink: 0.0,
@@ -55,7 +55,7 @@ impl GameState for GameStateIntro {
     }
 
     fn update(&mut self, _ctx: &mut Context, audio_requester: &mut AudioRequester, player_input: ct::player::PlayerInput, dt: f32) -> bool {
-        if player_input.left && !self.has_pressed_confirm {
+        if player_input.shoot && !self.has_pressed_confirm {
             self.has_pressed_confirm = true;
             audio_requester.add(AudioRequest::IntroMusic(false));
             audio_requester.add(AudioRequest::Confirm);
@@ -121,7 +121,7 @@ impl GameStateDeath {
             game_over_timer: 0.0,
             score_receiver,
             score_text: None,
-            input_text: Text::new(ctx, "PRESS D TO CONTINUE", &graphics::Font::default_font().unwrap()).unwrap()
+            input_text: Text::new(ctx, "PRESS LMB TO RESTART", &graphics::Font::default_font().unwrap()).unwrap()
         }
     }
 }
@@ -148,7 +148,10 @@ impl GameState for GameStateDeath {
 
     fn update(&mut self, _ctx: &mut Context, _audio_requester: &mut AudioRequester, player_input: ct::player::PlayerInput, dt: f32) -> bool {
         self.game_over_timer = (self.game_over_timer - dt).max(0.0);
-        player_input.right
+
+        // Wait until fade is done before allowing restart, just to make
+        // sure the player don't accidentally clicks past this screen
+        player_input.shoot && self.game_over_timer == 0.0
     }
 
     fn draw(&mut self, ctx: &mut Context) {
@@ -170,14 +173,17 @@ impl GameState for GameStateDeath {
         if let Some(s) = &self.score_text {
             graphics::draw_ex(ctx, s, draw_params).ok();
         }
+        
+        // Show input hint after fade is done
+        if self.game_over_timer == 0.0 {
+            // Create new draw params with slight destination offset
+            let draw_params = graphics::DrawParam {
+                dest: Point2::new(draw_params.dest.x, draw_params.dest.y + screen_size.1 as f32 * 0.1),
+                ..draw_params
+            };
 
-        // Create new draw params with slight destination offset
-        let draw_params = graphics::DrawParam {
-            dest: Point2::new(draw_params.dest.x, draw_params.dest.y + screen_size.1 as f32 * 0.1),
-            ..draw_params
-        };
-
-        graphics::draw_ex(ctx, &self.input_text, draw_params).ok();
+            graphics::draw_ex(ctx, &self.input_text, draw_params).ok();
+        }
     }
 }
 
