@@ -18,6 +18,7 @@ const FADE_INTO_GAMEPLAY_DURATION: f32 = 3.0;
 
 pub struct GameStateIntro {
     start_game_text: Text,
+    mission_text: Text,
     good_luck_text: Text,
     start_game_text_blink: f32,
     fade_into_gameplay_timer: f32,
@@ -28,7 +29,8 @@ impl GameStateIntro {
     pub fn new(ctx: &mut Context) -> Self {
         Self {
             start_game_text: Text::new(ctx, "PRESS LMB TO START GAME!", &graphics::Font::default_font().unwrap()).unwrap(),
-            good_luck_text: Text::new(ctx, "GOOD LUCK!", &graphics::Font::default_font().unwrap()).unwrap(),
+            good_luck_text: Text::new(ctx, "STAY ALIVE! PROTECT ALLY!", &graphics::Font::default_font().unwrap()).unwrap(),
+            mission_text: Text::new(ctx, "GOOD LUCK!", &graphics::Font::default_font().unwrap()).unwrap(),
             start_game_text_blink: 0.0,
             fade_into_gameplay_timer: 0.0,
             has_pressed_confirm: false
@@ -76,7 +78,8 @@ impl GameState for GameStateIntro {
         if self.start_game_text_blink.cos() > 0.0 {
             let screen_size = graphics::get_size(ctx);
             let text_pos = Point2::new(screen_size.0 as f32 * 0.5, screen_size.1 as f32 * 0.5);
-            let p = graphics::DrawParam {
+
+            let draw_params = graphics::DrawParam {
                 dest: text_pos,
                 scale: graphics::Point2::new(2.0, 1.0),
                 offset: Point2::new(0.5, 0.5),
@@ -84,13 +87,19 @@ impl GameState for GameStateIntro {
                 ..Default::default()
             };
 
-            let text = if self.has_pressed_confirm {
-                &self.good_luck_text
-            } else {
-                &self.start_game_text
-            };
+            if self.has_pressed_confirm {
+                graphics::draw_ex(ctx, &self.mission_text, draw_params).ok();
 
-            graphics::draw_ex(ctx, text, p).ok();
+                // Create new draw params with slight offset
+                let draw_params = graphics::DrawParam {
+                    dest: Point2::new(draw_params.dest.x, draw_params.dest.y - screen_size.1 as f32 * 0.1),
+                    ..draw_params
+                };
+
+                graphics::draw_ex(ctx, &self.good_luck_text, draw_params).ok();
+            } else {
+                graphics::draw_ex(ctx, &self.start_game_text, draw_params).ok();
+            };
         }
     }
 }

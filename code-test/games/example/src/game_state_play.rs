@@ -48,10 +48,10 @@ impl GameStatePlay {
     fn update_asteroid_spawning(&mut self, world_size: Vector2, dt: f32) {
         self.asteroid_spawn_timer -= dt;
         if self.asteroid_spawn_timer < 0.0 {
-            self.asteroid_spawn_timer = 2.0;
+            self.asteroid_spawn_timer = 1.0;
 
             // Skip spawning if we already have too many splittable asteroids
-            if self.projectile_shooter.count_alive(projectile::ProjectileType::Asteroid(false)) > 3 { return; }
+            if self.projectile_shooter.count_alive(projectile::ProjectileType::Asteroid(false)) > 5 { return; }
 
             let mut rng = rand::thread_rng();
             let r = rng.gen_range(0.0, consts::PI * 2.0) as f32;
@@ -123,7 +123,7 @@ impl game_state::GameState for GameStatePlay {
         // There's always one actions for each ship
         let actions = &self.ship_behavior_processor.get_actions();
         let ship_count = self.ship_factory.get_ship_count();
-        let mut ship_destroy_indices = Vec::new();
+        //let mut ship_destroy_indices = Vec::new();
 
         self.ship_draw_data.clear();
 
@@ -131,14 +131,8 @@ impl game_state::GameState for GameStatePlay {
             // Check ship collision first
             let collision_handle = self.ship_factory.get_ship_collision_handle(i);
             if self.collision_system.check_collider(collision_handle) {
-                ship_destroy_indices.push(i);
-
-                // Player ship has collided! Time to end state!
-                if self.ship_factory.is_player(i) {
-                    return true;
-                }
-
-                continue;
+                // Either the player or ally died. Game over!
+                return true;
             }
 
             let ship_info = self.ship_factory.get_ship_info(i);
@@ -181,7 +175,6 @@ impl game_state::GameState for GameStatePlay {
             });
         }
 
-        self.ship_factory.destroy_ships(&ship_destroy_indices[..]);
         self.update_asteroid_spawning(world_size, dt);
         self.update_enemy_spawning(dt);
         self.projectile_shooter.move_projectiles(world_size, 
@@ -206,7 +199,7 @@ impl game_state::GameState for GameStatePlay {
         self.gfx_util.draw_projectiles(ctx, projectile_draw_data.into_iter());
         self.gfx_util.draw_asteroids(ctx, asteroid_draw_data.into_iter());
 
-        // Copy draw data by hand. Not sure if this is idiomatic...
+        // Copy draw data by hand. Not sure if this is considered idiomatic...
         let mut ship_draw_data = Vec::new();
         for draw_data in &self.ship_draw_data[..] {
             ship_draw_data.push(gfx::ShipDrawData { ..*draw_data });

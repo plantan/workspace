@@ -63,12 +63,6 @@ impl ShipFactory {
         self.ships.push(new_ship);
     }
 
-    pub fn destroy_ships(&mut self, destroy_indices: &[usize]) {
-        for i in destroy_indices {
-            self.ships.remove(*i);
-        }
-    }
-
     pub fn get_ship_count(&mut self) -> usize {
         self.ships.len()
     }
