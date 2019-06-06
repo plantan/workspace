@@ -43,14 +43,14 @@ pub struct AudioPlayer {
 
 impl AudioPlayer {
     pub fn new(ctx: &mut Context) -> Self {
-        let mut confirm_sound = audio::Source::new(ctx, "/confirm.wav").unwrap();
-        let mut death_sound = audio::Source::new(ctx, "/death.wav").unwrap();
+        let mut confirm_sound = audio::Source::new(ctx, "/confirm.ogg").unwrap();
+        let mut death_sound = audio::Source::new(ctx, "/death.ogg").unwrap();
 
         confirm_sound.set_repeat(false);
         death_sound.set_repeat(false);
 
-        let laser_sound_pool = AudioPlayer::create_audio_pool(ctx, "/laser.wav", 5);
-        let hit_sound_pool = AudioPlayer::create_audio_pool(ctx, "/hit.wav", 5);
+        let laser_sound_pool = AudioPlayer::create_audio_pool(ctx, "/laser.ogg", 5);
+        let hit_sound_pool = AudioPlayer::create_audio_pool(ctx, "/hit.ogg", 5);
         
         Self {
             music: None,
@@ -96,7 +96,7 @@ impl AudioPlayer {
             match requester.requests.pop_front().unwrap() {
                 AudioRequest::IntroMusic(play) => {
                     if play {
-                        self.music = Some(AudioPlayer::load_and_play_music(ctx, "/solstice.wav"));
+                        self.music = Some(AudioPlayer::load_and_play_music(ctx, "/solstice.ogg"));
                     } else {
                         self.try_stop_music();
                     }
@@ -104,7 +104,7 @@ impl AudioPlayer {
 
                 AudioRequest::GameplayMusic(play) => {
                     if play {
-                        self.music = Some(AudioPlayer::load_and_play_music(ctx, "/gradius.wav"));
+                        self.music = Some(AudioPlayer::load_and_play_music(ctx, "/gradius.ogg"));
                     } else {
                         self.try_stop_music();
                     }
@@ -112,7 +112,7 @@ impl AudioPlayer {
 
                 AudioRequest::GameOverMusic(play) => {
                     if play {
-                        self.music = Some(AudioPlayer::load_and_play_music(ctx, "/goemon.wav"));
+                        self.music = Some(AudioPlayer::load_and_play_music(ctx, "/goemon.ogg"));
                     } else {
                         self.try_stop_music();
                     }
