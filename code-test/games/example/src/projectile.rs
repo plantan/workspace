@@ -123,7 +123,7 @@ impl ProjectileShooter {
                 let did_collide_last_frame = collision_system.check_collider(projectile.collision_handle);
                 if did_collide_last_frame {
                     if projectile.projectile_type == ProjectileType::Asteroid(false) {
-                        asteroid_splits.push(projectile.position);
+                        asteroid_splits.push((projectile.position, projectile.velocity));
                     }
 
                     // Kill projectile by setting it's lifetime to 0
@@ -147,13 +147,14 @@ impl ProjectileShooter {
             }
         }
 
-        for split_pos in asteroid_splits {
+        for (split_pos, split_vel) in asteroid_splits {
             audio_requester.add(AudioRequest::Hit);
 
             let mut rng = rand::thread_rng();
             let mut rotation = rng.gen_range(0.0, consts::PI * 2.0);
             for _ in 0..4 {
-                let velocity = Vector2::new(rotation.cos(), rotation.sin()) * rng.gen_range(0.1, 0.2);
+                let vel_mag = split_vel.dot(&split_vel).sqrt();
+                let velocity = Vector2::new(rotation.cos(), rotation.sin()) * vel_mag * rng.gen_range(0.8, 1.2);
                 rotation += consts::PI * 0.5;
                 self.fire(split_pos, velocity, rng.gen_range(0.0, consts::PI * 2.0), ProjectileType::Asteroid(true), collision_system);
             }

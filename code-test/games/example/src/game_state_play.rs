@@ -3,6 +3,7 @@ use ct::{ prelude::*, gfx };
 use std::f32::consts;
 use graphics::{ self, Text };
 use rand::Rng;
+use lerp::Lerp;
 
 use super::audio::{ AudioRequester, AudioRequest };
 use super::raycast;
@@ -61,7 +62,11 @@ impl GameStatePlay {
 
             let spawn = Point2::new(r.cos() * world_size.x, r.sin() * world_size.y);
             let target = Point2::new(rng.gen_range(0.0, world_size.x * 0.5), rng.gen_range(0.0, world_size.y * 0.5));
-            let velocity = (target - spawn).normalize() * rng.gen_range(0.05, 0.3);
+
+            // Score makes asteroids move faster!
+            let velocity_multiplier = 1.0_f32.lerp(2.0, self.score / 500.0);
+
+            let velocity = (target - spawn).normalize() * rng.gen_range(0.05, 0.3) * velocity_multiplier;
             self.projectile_shooter.fire(spawn, velocity, r, projectile::ProjectileType::Asteroid(false), &mut self.collision_system);
         }
     }
