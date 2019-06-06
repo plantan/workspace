@@ -75,6 +75,14 @@ impl AudioPlayer {
         pool
     }
 
+    // Creating new sound sorce for music every time we play it, since calling stop()
+    // on it seems to make it unplayable after
+    fn load_and_play_music(ctx: &mut Context, path: &str) -> audio::Source {
+        let music = audio::Source::new(ctx, path).unwrap();
+        music.play().ok();
+        music
+    }
+
     fn try_stop_music(&mut self) {
         match &self.music {
             Some(s) => s.stop(),
@@ -87,9 +95,7 @@ impl AudioPlayer {
             match requester.requests.pop_back().unwrap() {
                 AudioRequest::IntroMusic(play) => {
                     if play {
-                        let music = audio::Source::new(ctx, "/solstice.wav").unwrap();
-                        music.play().ok();
-                        self.music = Some(music);
+                        self.music = Some(AudioPlayer::load_and_play_music(ctx, "/solstice.wav"));
                     } else {
                         self.try_stop_music();
                     }
@@ -97,9 +103,7 @@ impl AudioPlayer {
 
                 AudioRequest::GameplayMusic(play) => {
                     if play {
-                        let music = audio::Source::new(ctx, "/gradius.wav").unwrap();
-                        music.play().ok();
-                        self.music = Some(music);
+                        self.music = Some(AudioPlayer::load_and_play_music(ctx, "/gradius.wav"));
                     } else {
                         self.try_stop_music();
                     }

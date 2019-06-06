@@ -47,11 +47,11 @@ impl GameState for GameStateIntro {
         self.start_game_text_blink = 0.0;
     }
 
-    fn exit(&mut self, _ctx: &mut Context, audio_requester: &mut AudioRequester) {
+    fn exit(&mut self, _ctx: &mut Context, _audio_requester: &mut AudioRequester) {
         
     }
 
-    fn update(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester, player_input: ct::player::PlayerInput, dt: f32) -> bool {
+    fn update(&mut self, _ctx: &mut Context, audio_requester: &mut AudioRequester, player_input: ct::player::PlayerInput, dt: f32) -> bool {
         if player_input.shoot && !self.has_pressed_confirm {
             self.has_pressed_confirm = true;
             audio_requester.add(AudioRequest::IntroMusic(false));
@@ -119,11 +119,11 @@ impl GameState for GameStateDeath {
         self.game_over_timer = GAME_OVER_DURATION;
     }
 
-    fn exit(&mut self, _ctx: &mut Context, audio_requester: &mut AudioRequester) {
+    fn exit(&mut self, _ctx: &mut Context, _audio_requester: &mut AudioRequester) {
 
     }
 
-    fn update(&mut self, _ctx: &mut Context, audio_requester: &mut AudioRequester, player_input: ct::player::PlayerInput, dt: f32) -> bool {
+    fn update(&mut self, _ctx: &mut Context, _audio_requester: &mut AudioRequester, _player_input: ct::player::PlayerInput, dt: f32) -> bool {
         self.game_over_timer -= dt;
         self.game_over_timer < 0.0
     }

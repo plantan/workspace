@@ -61,7 +61,7 @@ impl GameStatePlay {
         }
     }
 
-    fn update_enemy_spawning(&mut self, dt: f32) {
+    fn update_enemy_spawning(&mut self, _dt: f32) {
     }
 
     fn calc_world_size(&self, ctx: &mut Context) -> Vector2 {
@@ -84,7 +84,7 @@ impl game_state::GameState for GameStatePlay {
         graphics::set_background_color(ctx, graphics::Color::new(0.0, 0.0, 0.0, 1.0));
     }
 
-    fn exit(&mut self, ctx: &mut Context, audio_requester: &mut AudioRequester) {
+    fn exit(&mut self, _ctx: &mut Context, audio_requester: &mut AudioRequester) {
         audio_requester.add(AudioRequest::GameplayMusic(false));
     }
 
