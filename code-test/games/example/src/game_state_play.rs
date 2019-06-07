@@ -71,9 +71,6 @@ impl GameStatePlay {
         }
     }
 
-    fn update_enemy_spawning(&mut self, _dt: f32) {
-    }
-
     fn calc_world_size(&self, ctx: &mut Context) -> Vector2 {
         let screen_size = graphics::get_size(ctx);
         let world_size = self.gfx_util.screen_to_world * na::Vector4::new(screen_size.0 as f32, screen_size.1 as f32, 0.0, 1.0);
@@ -183,7 +180,6 @@ impl game_state::GameState for GameStatePlay {
         }
 
         self.update_asteroid_spawning(world_size, dt);
-        self.update_enemy_spawning(dt);
         self.projectile_shooter.move_projectiles(world_size, 
             &mut self.collision_system,
             &mut self.raycast_processor,

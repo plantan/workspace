@@ -122,6 +122,8 @@ impl ProjectileShooter {
             if projectile.lifetime > 0.0 {
                 let did_collide_last_frame = collision_system.check_collider(projectile.collision_handle);
                 if did_collide_last_frame {
+
+                    // Let's split asteroids into smaller pieces if they're big enough
                     if projectile.projectile_type == ProjectileType::Asteroid(false) {
                         asteroid_splits.push((projectile.position, projectile.velocity));
                     }
@@ -147,11 +149,13 @@ impl ProjectileShooter {
             }
         }
 
+        // Create some asteroid debris!
         for (split_pos, split_vel) in asteroid_splits {
             audio_requester.add(AudioRequest::Hit);
 
             let mut rng = rand::thread_rng();
             let mut rotation = rng.gen_range(0.0, consts::PI * 2.0);
+
             for _ in 0..4 {
                 let vel_mag = split_vel.dot(&split_vel).sqrt();
                 let velocity = Vector2::new(rotation.cos(), rotation.sin()) * vel_mag * rng.gen_range(0.8, 1.2);
