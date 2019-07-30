@@ -1,6 +1,6 @@
 #include "FBXExtractionResult.h"
 #include "Vertex.h"
-#include "../../Motor/src/motor/core/Mesh.h"
+#include "MeshHeader.h"
 
 FBXExtractionResult::FBXExtractionResult(const int totalVertexCount, const bool exportUVs, const bool exportNormals) :
 mVertexCount(0),

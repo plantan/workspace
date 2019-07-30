@@ -1,7 +1,6 @@
 #include "Vertex.h"
 #include "FBXExporter.h"
 #include "FBXExtractionResult.h"
-#include "../../Motor/src/motor/core/Mesh.h"
 
 FBXExporter::FBXExporter() {
 	mpFbxSdkManager = FbxManager::Create();
