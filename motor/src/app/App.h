@@ -2,7 +2,7 @@
 #define __APP_H__
 
 #include "../motor/Motor.h"
-class RendererBase;
+class IRenderer;
 
 class App {
 public:
@@ -18,7 +18,6 @@ private:
 
 	CoreBase* mpCore;
 	Camera* mpCamera;
-	Scene mScene;
 	Model* mpModel;
 	Mesh* mpMesh;
 	Material* mpMaterial;

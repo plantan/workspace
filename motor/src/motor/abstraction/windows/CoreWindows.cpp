@@ -5,6 +5,7 @@
 #include "FileStreamWindows.h"
 #include "../../../app/App.h"
 #include "../../core/Defines.h"
+#include "../../core/Model.h"
 
 CoreWindows* CoreWindows::smpInstance = nullptr;
 
@@ -79,8 +80,6 @@ bool CoreWindows::init( const unsigned int width, const unsigned int height ) {
 }
 
 void CoreWindows::update() {
-	CoreBase::update();
-	
 	MSG msg;
 	while( PeekMessage( &msg, NULL, 0, 0, PM_REMOVE ) ) {
 		TranslateMessage( &msg );
@@ -88,8 +87,8 @@ void CoreWindows::update() {
 	}
 }
 
-void CoreWindows::render( Scene* pScene, const bool clear ) const {
-	mpRenderer->render( pScene, clear );
+void CoreWindows::render(Model* pModel, const bool clear) const {
+	mpRenderer->render(pModel, clear);
 }
 
 void CoreWindows::debugLog( const char* message ) {

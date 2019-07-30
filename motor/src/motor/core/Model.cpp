@@ -4,7 +4,7 @@
 #include "Camera.h"
 #include "../math/Vec3.h"
 #include "../abstraction/base/CoreBase.h"
-#include "../abstraction/base/RendererBase.h"
+#include "../abstraction/base/IRenderer.h"
 
 Model::Model( const int meshID, Mesh* pMesh, Material* pMaterial ) :
 mMeshID(meshID),

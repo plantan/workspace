@@ -6,6 +6,7 @@
 #include "../windows/FileStreamWindows.h"
 
 using namespace std;
+class Model;
 
 class CoreWindows : public CoreBase {
 public:
@@ -14,10 +15,10 @@ public:
 
 	bool init( const unsigned int width = 0, const unsigned int height = 0 );
 	void update();
-	void render( Scene* pScene, const bool clear ) const;
+	void render(Model* pScene, const bool clear) const;
 	void debugLog( const char* message );
 
-	shared_ptr<RendererBase> getRenderer() const { return mpRenderer; }
+	shared_ptr<IRenderer> getRenderer() const { return mpRenderer; }
 	shared_ptr<FileStreamBase> getFileStream() const { return mpFileStream; }
 
 private:

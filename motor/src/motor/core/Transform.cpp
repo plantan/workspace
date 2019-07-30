@@ -1,6 +1,6 @@
 #include "Transform.h"
 #include "../abstraction/base/CoreBase.h"
-#include "../abstraction/base/RendererBase.h"
+#include "../abstraction/base/IRenderer.h"
 #include "Camera.h"
 
 Transform::Transform() {

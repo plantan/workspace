@@ -1,5 +1,0 @@
-#ifndef __INPUTMANAGERBASE_H__
-#define __INPUTMANAGERBASE_H__
-
-
-#endif // __INPUTMANAGERBASE_H__

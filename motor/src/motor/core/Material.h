@@ -5,12 +5,12 @@
 #include <memory>
 
 using namespace std;
-class RendererBase;
+class IRenderer;
 class Mat4;
 
 class Material {
 public:
-	explicit Material( const int shaderProgram, shared_ptr<RendererBase> pRenderer );
+	explicit Material( const int shaderProgram, shared_ptr<IRenderer> pRenderer );
 	~Material() {};
 
 	void setUniformFloat( const float value, const char* pUniformName );
@@ -24,7 +24,7 @@ public:
 	unsigned int mShaderProgram;
 
 private:
-	shared_ptr<RendererBase> mpRenderer;
+	shared_ptr<IRenderer> mpRenderer;
 
 	map<const char*, float> mFloatUniforms;
 	map<const char*, int> mIntUniforms;
